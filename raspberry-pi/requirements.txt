@@ -1,0 +1,6 @@
+websockets>=10.4,<16
+adafruit-circuitpython-dht>=4.0.7
+RPi.GPIO>=0.7.1
+smbus2>=0.5.0
+numpy>=1.24
+opencv-contrib-python>=4.8

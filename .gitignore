@@ -1,0 +1,45 @@
+# IDE及系统文件
+.idea/
+.vscode/
+.trae/
+.DS_Store
+Thumbs.db
+
+# 前端
+**/node_modules/
+**/dist/
+frontend/front-end/
+
+# Java及Maven
+**/target/
+*.class
+*.jar
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+
+# 日志
+*.log
+*.tmp
+*.cache
+
+# 本地配置
+.env
+.env.*
+!.env.example
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.properties
+
+# 人脸和设备私有数据
+raspberry-pi/config.json
+raspberry-pi/known_faces/
+raspberry-pi/data/face_db.npz
+
+# 原始材料
+*.zip
+*.pdf
+*.pptx
+*.mp4

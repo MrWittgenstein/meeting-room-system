@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.uestcfir.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.uestcfir.pojo.entity.User">
+        <id column="user_id" property="userId" />
+        <result column="username" property="username" />
+        <result column="real_name" property="realName" />
+        <result column="password" property="password" />
+        <result column="email" property="email" />
+        <result column="phone" property="phone" />
+        <result column="user_type" property="userType" />
+        <result column="status" property="status" />
+        <result column="integral" property="integral" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="email_hash" property="emailHash" />
+        <result column="encrypted_email" property="encryptedEmail" />
+    </resultMap>
+
+    <!-- 插入用户 -->
+    <insert id="insertUser" parameterType="com.uestcfir.pojo.entity.User">
+        INSERT INTO user
+        (username, password, real_name, email, phone, user_type, status, integral, create_time, update_time,email_hash)
+        VALUES
+            (#{username}, #{password}, #{realName}, #{email}, #{phone}, #{userType}, #{status}, #{integral}, #{createTime}, #{updateTime},#{emailHash})
+    </insert>
+
+    <!-- 检查手机号是否存在 -->
+    <select id="checkPhone" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM user WHERE phone = #{phone}
+    </select>
+
+    <!-- 根据邮箱查询用户 -->
+    <select id="selectByEmail" resultMap="UserResultMap">
+        SELECT * FROM user WHERE email = #{email}
+    </select>
+
+    <!-- 根据用户ID查询用户 -->
+    <select id="selectByUserId" resultMap="UserResultMap">
+        SELECT * FROM user WHERE user_id = #{userId}
+    </select>
+
+    <!-- 更新密码 -->
+    <update id="updatePassword">
+        UPDATE user SET password = #{password}, update_time = NOW()
+        WHERE email = #{email}
+    </update>
+
+    <!-- 分页查询用户列表 -->
+    <select id="selectUsersWithPage" resultMap="UserResultMap">
+        <![CDATA[
+        SELECT * FROM user
+        ]]>
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR real_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计用户数量 -->
+    <select id="countUsers" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR real_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据ID查询用户 -->
+    <select id="selectUserById" resultMap="UserResultMap">
+        SELECT * FROM user WHERE user_id = #{userId}
+    </select>
+
+    <!-- 检查用户名是否存在 -->
+    <select id="existsByUsername" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM user WHERE username = #{username}
+    </select>
+
+    <!-- 检查邮箱是否存在 -->
+    <select id="existsByEmail" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM user WHERE email = #{email}
+    </select>
+
+    <!-- 更新用户信息 -->
+    <update id="updateUser" parameterType="com.uestcfir.pojo.entity.User">
+        UPDATE user
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="userType != null">user_type = #{userType},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="integral != null">integral = #{integral},</if>
+            <if test="emailHash != null">email_hash = #{emailHash},</if>
+
+            update_time = NOW()
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 删除用户 -->
+    <delete id="deleteUser">
+        DELETE FROM user WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 统计总用户数 -->
+    <select id="countTotalUsers" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user
+    </select>
+
+    <!-- 根据用户类型统计 -->
+    <select id="countUsersByType" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user WHERE user_type = #{userType}
+    </select>
+
+    <!-- 根据用户状态统计 -->
+    <select id="countUsersByStatus" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user WHERE status = #{status}
+    </select>
+
+    <!-- 根据用户名查询用户 -->
+    <select id="selectByUsername" resultMap="UserResultMap">
+        SELECT * FROM user WHERE username = #{username}
+    </select>
+
+    <!-- 根据用户类型查询用户列表 -->
+    <select id="selectByUserType" resultMap="UserResultMap">
+        SELECT * FROM user WHERE user_type = #{userType}
+    </select>
+
+    <!-- 根据邮箱哈希查询用户 -->
+    <select id="selectByEmailHash" resultMap="UserResultMap">
+        SELECT * FROM user WHERE email_hash = #{emailHash}
+    </select>
+
+    <!-- 检查邮箱哈希是否存在 -->
+    <select id="existsByEmailHash" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM user WHERE email_hash = #{emailHash}
+    </select>
+
+    <!-- 更新邮箱哈希 -->
+    <update id="updateEmailHash">
+        UPDATE user SET email_hash = #{emailHash}, update_time = NOW()
+        WHERE user_id = #{id}
+    </update>
+
+    <!-- 更新加密邮箱 -->
+    <update id="updateEncryptedEmail">
+        UPDATE user SET encrypted_email = #{email}, update_time = NOW()
+        WHERE user_id = #{id}
+    </update>
+
+    <update id="updateAvatarUrl">
+            UPDATE user SET originalurl = #{originalFileUrl}, thumbnailurl = #{thumbnailFileUrl}
+            WHERE user_id = #{userId}
+    </update>
+</mapper>

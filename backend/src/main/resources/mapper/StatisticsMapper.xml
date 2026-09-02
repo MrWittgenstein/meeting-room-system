@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.uestcfir.mapper.StatisticsMapper">
+
+    <!-- 统计会议室总数 -->
+    <select id="countTotalMeetingRooms" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM meetingroom
+    </select>
+
+    <!-- 统计待审核申请（status = 0） -->
+    <select id="countPendingApplications" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE status = 0  -- 待确认
+    </select>
+
+    <!-- 统计已审核申请（status = 4 或 1 2） -->
+    <select id="countReviewedApplications" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE status IN (4, 1,2,3)  -- 已通过、已拒绝.已完成
+    </select>
+
+    <!-- 统计今日会议（reserve_date = 今天，status = 4） -->
+    <select id="countTodayMeetings" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE reserve_date = #{today}
+          AND status IN (4,0,2,3)  -- 已通过
+    </select>
+
+    <!-- 获取今日会议详情列表 -->
+    <select id="getTodayMeetingList" resultType="com.uestcfir.pojo.dto.TodayMeetingDTO">
+        SELECT
+            r.room_name as roomName,
+            r.start_time as startTime,
+            r.reserve_date as reserveDate,
+            r.purpose,
+            r.username,
+            r.status,
+            CASE r.status
+                WHEN 0 THEN '待确认'
+                WHEN 1 THEN '已拒绝'
+                WHEN 2 THEN '已过期'
+                WHEN 3 THEN '使用中'
+                WHEN 4 THEN '已通过'
+                ELSE '未知状态'
+                END as statusDesc
+        FROM reservations r
+        WHERE r.reserve_date = #{today}
+        ORDER BY r.start_time ASC
+    </select>
+
+    <!-- 统计今日待审核申请 -->
+    <select id="countTodayPendingApplications" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE reserve_date = #{today}
+          AND status = 0  -- 待确认
+    </select>
+
+    <!-- 统计管理员今日已审批的会议数（包括通过和拒绝） -->
+    <select id="countTodayApprovedMeetings" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE DATE(approve_time) = CURDATE()
+          AND approver_id IS NOT NULL
+          AND status IN (1, 4,2,3)  -- 已批准(4)或已拒绝(1)都算已审批
+    </select>
+
+
+
+
+
+    <!-- 获取会议室使用频率图表数据 -->
+    <select id="getRoomFrequencyChart" resultType="com.uestcfir.pojo.dto.RoomFrequencyChartDTO">
+        <!-- 先获取符合条件的会议室列表 -->
+        WITH room_list AS (
+        SELECT
+        m.room_id,
+        m.room_name,
+        m.type,
+        m.location
+        FROM meetingroom m
+        WHERE m.status = 0  -- 只统计正常状态的会议室
+        <if test="query.roomType != null and query.roomType != ''">
+            AND m.type = #{query.roomType}
+        </if>
+        <if test="query.location != null and query.location != ''">
+            AND m.location = #{query.location}
+        </if>
+        ),
+        <!-- 统计每个会议室的使用次数 -->
+        usage_stats AS (
+        SELECT
+        rl.room_id,
+        rl.room_name,
+        COUNT(r.reservation_id) as usage_count
+        FROM room_list rl
+        LEFT JOIN reservations r ON rl.room_id = r.room_id
+        AND r.reserve_date BETWEEN
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        WHEN #{query.period} = 'month' THEN DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL (QUARTER(CURDATE())-1)*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-01-01')
+        WHEN #{query.period} = 'custom' AND #{query.startDate} IS NOT NULL THEN #{query.startDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        END
+        AND
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        WHEN #{query.period} = 'month' THEN LAST_DAY(CURDATE())
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL QUARTER(CURDATE())*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-12-31')
+        WHEN #{query.period} = 'custom' AND #{query.endDate} IS NOT NULL THEN #{query.endDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        END
+        AND r.status IN (2,4,3)  -- 只统计已通过的预约
+        GROUP BY rl.room_id, rl.room_name
+        ),
+        <!-- 计算统计信息 -->
+        stat_summary AS (
+        SELECT
+        COUNT(*) as room_count,
+        SUM(usage_count) as total_usage,
+        AVG(usage_count) as avg_usage,
+        MAX(usage_count) as max_usage,
+        MIN(usage_count) as min_usage
+        FROM usage_stats
+        )
+        SELECT
+        <!-- 这里使用程序组装RoomFrequencyChartDTO -->
+        #{query.period} as period,
+        DATE_FORMAT(
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        WHEN #{query.period} = 'month' THEN DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL (QUARTER(CURDATE())-1)*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-01-01')
+        WHEN #{query.period} = 'custom' AND #{query.startDate} IS NOT NULL THEN #{query.startDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        END,
+        '%Y-%m-%d'
+        ) as start_date,
+        DATE_FORMAT(
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        WHEN #{query.period} = 'month' THEN LAST_DAY(CURDATE())
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL QUARTER(CURDATE())*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-12-31')
+        WHEN #{query.period} = 'custom' AND #{query.endDate} IS NOT NULL THEN #{query.endDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        END,
+        '%Y-%m-%d'
+        ) as end_date,
+        NOW() as stat_time,
+        ss.total_usage as total_usage_count,
+        ss.avg_usage as average_usage_count,
+        ss.max_usage as max_usage_count,
+        ss.min_usage as min_usage_count
+        FROM stat_summary ss
+    </select>
+
+    <!-- 获取会议室使用次数排名 -->
+    <select id="getRoomUsageRank" resultType="com.uestcfir.pojo.dto.RoomUsageRankDTO">
+        SELECT
+        0 as `rank`,
+        m.room_id,
+        m.room_name,
+        COALESCE(COUNT(r.reservation_id), 0) as usage_count,
+        m.type as room_type,
+        m.capacity,
+        m.location,
+        ROUND(
+        COALESCE(COUNT(r.reservation_id), 0) * 100.0 / NULLIF((
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE reserve_date BETWEEN
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        WHEN #{query.period} = 'month' THEN DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL (QUARTER(CURDATE())-1)*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-01-01')
+        WHEN #{query.period} = 'custom' AND #{query.startDate} IS NOT NULL THEN #{query.startDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        END
+        AND
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        WHEN #{query.period} = 'month' THEN LAST_DAY(CURDATE())
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL QUARTER(CURDATE())*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-12-31')
+        WHEN #{query.period} = 'custom' AND #{query.endDate} IS NOT NULL THEN #{query.endDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        END
+        AND status IN (4,3,2)
+        ), 0),
+        2
+        ) as usage_rate
+        FROM meetingroom m
+        LEFT JOIN reservations r ON m.room_id = r.room_id
+        AND r.reserve_date BETWEEN
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        WHEN #{query.period} = 'month' THEN DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL (QUARTER(CURDATE())-1)*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-01-01')
+        WHEN #{query.period} = 'custom' AND #{query.startDate} IS NOT NULL THEN #{query.startDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        END
+        AND
+        CASE
+        WHEN #{query.period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        WHEN #{query.period} = 'month' THEN LAST_DAY(CURDATE())
+        WHEN #{query.period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL QUARTER(CURDATE())*3 MONTH - INTERVAL 1 DAY
+        WHEN #{query.period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-12-31')
+        WHEN #{query.period} = 'custom' AND #{query.endDate} IS NOT NULL THEN #{query.endDate}
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        END
+        AND r.status IN (4,3,2)
+        WHERE m.status = 0
+        <if test="query.roomType != null and query.roomType != ''">
+            AND m.type = #{query.roomType}
+        </if>
+        <if test="query.location != null and query.location != ''">
+            AND m.location = #{query.location}
+        </if>
+        <if test="query.includeZeroUsage == false">
+            AND r.reservation_id IS NOT NULL
+        </if>
+        GROUP BY m.room_id, m.room_name, m.type, m.capacity, m.location
+        ORDER BY
+        <choose>
+            <when test="query.sortBy == 'count_desc'">usage_count DESC</when>
+            <when test="query.sortBy == 'count_asc'">usage_count ASC</when>
+            <when test="query.sortBy == 'name'">m.room_name</when>
+            <otherwise>usage_count DESC</otherwise>
+        </choose>
+        <if test="query.limit != null and query.limit > 0">
+            LIMIT #{query.limit}
+        </if>
+    </select>
+
+    <!-- 获取时间段内的会议室使用次数（用于对比） -->
+    <select id="getRoomUsageByPeriod" resultType="java.util.Map">
+        SELECT
+        r.room_id,
+        COUNT(r.reservation_id) as usage_count
+        FROM reservations r
+        WHERE r.reserve_date BETWEEN #{startDate} AND #{endDate}
+        AND r.status IN (2,3,4)
+        <if test="roomIds != null and roomIds.size() > 0">
+            AND r.room_id IN
+            <foreach collection="roomIds" item="roomId" open="(" separator="," close=")">
+                #{roomId}
+            </foreach>
+        </if>
+        GROUP BY r.room_id
+    </select>
+
+    <!-- 获取会议室上周使用次数 -->
+    <select id="getLastWeekUsageCount" resultType="java.util.Map">
+        SELECT
+        room_id,
+        COUNT(reservation_id) as usage_count
+        FROM reservations
+        WHERE reserve_date BETWEEN
+        DATE_SUB(#{currentWeekStart}, INTERVAL 7 DAY)
+        AND DATE_SUB(#{currentWeekEnd}, INTERVAL 7 DAY)
+        AND status IN (4,3,2)
+        <if test="roomIds != null and roomIds.size() > 0">
+            AND room_id IN
+            <foreach collection="roomIds" item="roomId" open="(" separator="," close=")">
+                #{roomId}
+            </foreach>
+        </if>
+        GROUP BY room_id
+    </select>
+
+    <!-- 获取统计周期的开始和结束日期 -->
+    <select id="getPeriodDateRange" resultType="java.util.Map">
+        SELECT
+            CASE
+                WHEN #{period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+                WHEN #{period} = 'month' THEN DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                WHEN #{period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL (QUARTER(CURDATE())-1)*3 MONTH - INTERVAL 1 DAY
+                WHEN #{period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-01-01')
+            ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        END as start_date,
+            CASE
+                WHEN #{period} = 'week' THEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        WHEN #{period} = 'month' THEN LAST_DAY(CURDATE())
+        WHEN #{period} = 'quarter' THEN MAKEDATE(YEAR(CURDATE()), 1) + INTERVAL QUARTER(CURDATE())*3 MONTH - INTERVAL 1 DAY
+        WHEN #{period} = 'year' THEN DATE_FORMAT(CURDATE(), '%Y-12-31')
+        ELSE DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE())-6 DAY)
+        END as end_date
+    </select>
+
+    <!-- 获取会议室基本信息列表 -->
+    <select id="getRoomBasicInfo" resultType="java.util.Map">
+        SELECT
+        room_id,
+        room_name,
+        type,
+        location,
+        capacity
+        FROM meetingroom
+        WHERE status = 0
+        <if test="roomType != null and roomType != ''">
+            AND type = #{roomType}
+        </if>
+        <if test="location != null and location != ''">
+            AND location = #{location}
+        </if>
+        ORDER BY room_name
+    </select>
+</mapper>

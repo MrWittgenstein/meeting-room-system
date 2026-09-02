@@ -1,0 +1,17 @@
+[Unit]
+Description=Smart Meeting Room Raspberry Pi Sensor WebSocket Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=group1
+Group=group1
+WorkingDirectory=/home/group1/raspberry_pi_server
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/group1/raspberry_pi_server/.venv/bin/python /home/group1/raspberry_pi_server/sensor_server.py --config /home/group1/raspberry_pi_server/config.json
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

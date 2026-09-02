@@ -1,0 +1,245 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>树莓派智能会议室管理系统</title>
+    <link rel="stylesheet" href="/styles/smart-room.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "/vendor/three/three.module.js",
+            "three/addons/": "/vendor/three/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+<div class="smart-room-app">
+    <aside class="rail rail-left">
+        <section class="panel hero-panel">
+            <p class="eyebrow">SMART MEETING ROOM SYSTEM</p>
+            <h1>树莓派智能会议室管理系统</h1>
+            <p class="hero-copy">
+                基于 Web 的软件系统演示页面。3D 会议室模型区域已预留 three.js 接入位，当前页面支持设备联动、
+                实时状态刷新、热点交互和日志追踪。
+            </p>
+        </section>
+
+        <section class="panel stack-panel">
+            <div class="panel-head">
+                <h2>会议室切换</h2>
+                <span class="pill muted">3个场景</span>
+            </div>
+            <div id="room-switches" class="switch-list"><button type="button" class="switch-card active">董事会议室</button><button type="button" class="switch-card">培训研讨室</button><button type="button" class="switch-card">创意协作室</button></div>
+        </section>
+
+        <section class="panel stack-panel">
+            <div class="panel-head">
+                <h2>系统模式</h2>
+                <span id="mode-badge" class="pill muted">联动优化</span>
+            </div>
+            <div id="mode-switches" class="switch-list"><button type="button" class="switch-card">日常办公</button><button type="button" class="switch-card active">专注讨论</button><button type="button" class="switch-card">演示汇报</button></div>
+        </section>
+
+        <section class="panel stack-panel">
+            <div class="panel-head">
+                <h2>设备控制</h2>
+                <span class="pill accent-soft">自动联动</span>
+            </div>
+            <div id="device-toggles" class="device-toggle-grid"><button type="button" class="device-toggle">
+            <span class="device-toggle-name">投影状态</span>
+            <strong class="device-toggle-value">已关</strong>
+        </button><button type="button" class="device-toggle active">
+            <span class="device-toggle-name">灯光状态</span>
+            <strong class="device-toggle-value">已开</strong>
+        </button><button type="button" class="device-toggle active">
+            <span class="device-toggle-name">自动状态</span>
+            <strong class="device-toggle-value">已开</strong>
+        </button></div>
+        </section>
+
+        <section class="panel detail-panel">
+            <div class="panel-head">
+                <h2 id="room-detail-title">董事会议室</h2>
+                <span class="pill accent-soft">状态关注</span>
+            </div>
+            <p id="room-detail-summary" class="detail-copy">偏正式的长桌布局，适合领导决策、商务会谈和高规格汇报。</p>
+            <ul id="room-detail-points" class="detail-points"><li>长桌 + 12席位</li><li>木饰面与投影幕布</li><li>线性吊灯与墙面展示区</li></ul>
+        </section>
+    </aside>
+
+    <main class="workspace">
+        <section class="panel banner-panel">
+            <div class="banner-copy">
+                <p class="eyebrow">第二学期软件系统展示</p>
+                <h2>董事会议室三维展示与环境联动</h2>
+                <p id="banner-description" class="banner-description">当前页面模拟董事会议室的温湿度、光照与投影联动，可作为树莓派边缘控制与智能照明策略的软件系统展示界面。</p>
+            </div>
+            <div class="banner-stats">
+                <article class="stat-card">
+                    <span class="stat-label">在线会议室</span>
+                    <strong id="stat-room-count" class="stat-value">3</strong>
+                    <span class="stat-note">董事 / 培训 / 创意</span>
+                </article>
+                <article class="stat-card">
+                    <span class="stat-label">设备联动</span>
+                    <strong id="stat-device-count" class="stat-value">7</strong>
+                    <span class="stat-note">投影、灯光、5类传感器</span>
+                </article>
+                <article class="stat-card">
+                    <span class="stat-label">系统状态</span>
+                    <strong id="stat-system-status" class="stat-value">正常</strong>
+                    <span id="stat-system-note" class="stat-note">环境稳定，树莓派边缘控制器在线。</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel viewer-panel">
+            <div class="viewer-topbar">
+                <div>
+                    <p class="eyebrow">3D 场景展示区</p>
+                    <h3 id="viewer-title">董事会议室 · three.js 模型嵌入窗口</h3>
+                </div>
+                <div id="view-presets" class="preset-group"><button type="button" class="preset-button active">全景</button><button type="button" class="preset-button">正前方</button><button type="button" class="preset-button">俯视</button></div>
+            </div>
+
+            <div id="scene-shell" class="scene-shell">
+                <div id="scene-canvas" class="scene-canvas"></div>
+                <iframe id="scene-iframe" class="scene-iframe" title="3D会议室模型" loading="lazy" referrerpolicy="no-referrer"></iframe>
+                <div id="hotspot-layer" class="hotspot-layer"></div>
+                <div class="dev-note">
+                    <strong>模型接入说明</strong>
+                    <p>
+                        当前优先加载独立模型页面。若模型页不可用，则回退到程序化降级预览。
+                        如需进一步联动控制，可继续为模型页补充 <code>postMessage</code> 协议。
+                    </p>
+                </div>
+            </div>
+
+            <div id="camera-controls" class="camera-controls"><button type="button" class="control-button">左转</button><button type="button" class="control-button">右转</button><button type="button" class="control-button">上仰</button><button type="button" class="control-button">下俯</button><button type="button" class="control-button">左移</button><button type="button" class="control-button">右移</button><button type="button" class="control-button">上移</button><button type="button" class="control-button">下移</button><button type="button" class="control-button">放大</button><button type="button" class="control-button">缩小</button></div>
+
+            <div class="viewer-tags">
+                <span class="viewer-tag">Web 主界面</span>
+                <span class="viewer-tag">three.js 模型接入位</span>
+                <span id="sync-tag" class="viewer-tag">当前支持后端数据轮询</span>
+            </div>
+        </section>
+    </main>
+
+    <aside class="rail rail-right">
+        <section class="panel status-panel">
+            <div class="panel-head">
+                <h2>状态监测</h2>
+                <span id="health-badge" class="pill success">正常</span>
+            </div>
+            <h3 id="health-title">运行正常 · 自动联动</h3>
+            <p id="health-copy" class="status-copy">环境稳定，树莓派边缘控制器在线。</p>
+        </section>
+
+        <section class="panel stack-panel">
+            <div class="panel-head">
+                <h2>设备状态</h2>
+                <span class="pill muted">实时刷新</span>
+            </div>
+            <div id="device-status-list" class="status-list">
+        <div class="status-row">
+            <span class="status-row-label">投影状态</span>
+            <strong class="status-row-value">已关闭</strong>
+        </div>
+    
+        <div class="status-row">
+            <span class="status-row-label">灯光状态</span>
+            <strong class="status-row-value">已开启</strong>
+        </div>
+    
+        <div class="status-row">
+            <span class="status-row-label">自动模式</span>
+            <strong class="status-row-value">已开启</strong>
+        </div>
+    
+        <div class="status-row">
+            <span class="status-row-label">人员状态</span>
+            <strong class="status-row-value">当前无人</strong>
+        </div>
+    </div>
+        </section>
+
+        <section class="panel stack-panel">
+            <div class="panel-head">
+                <h2>环境传感</h2>
+                <span id="data-source-badge" class="pill muted">仿真数据</span>
+            </div>
+            <div id="sensor-status-list" class="status-list">
+        <div class="status-row">
+            <span class="status-row-label">温湿度</span>
+            <strong class="status-row-value">25.8 °C / 46%</strong>
+        </div>
+    
+        <div class="status-row">
+            <span class="status-row-label">光照强度</span>
+            <strong class="status-row-value">532 lx</strong>
+        </div>
+    
+        <div class="status-row">
+            <span class="status-row-label">烟雾浓度</span>
+            <strong class="status-row-value">未部署</strong>
+        </div>
+    
+        <div class="status-row">
+            <span class="status-row-label">距离感知</span>
+            <strong class="status-row-value">未部署</strong>
+        </div>
+    </div>
+        </section>
+
+        <section class="panel hotspot-panel">
+            <div class="panel-head">
+                <h2>设备热点联动</h2>
+                <span class="pill muted">网页 / three.js 同步</span>
+            </div>
+            <div id="hotspot-tabs" class="hotspot-tabs"><button type="button" class="hotspot-tab active">投影</button><button type="button" class="hotspot-tab">灯光</button><button type="button" class="hotspot-tab">温湿度</button><button type="button" class="hotspot-tab">光敏</button></div>
+            <article class="device-card">
+                <div class="device-card-head">
+                    <h3 id="hotspot-card-title">智能投影终端</h3>
+                    <span id="hotspot-card-badge" class="pill warning">投影待机</span>
+                </div>
+                <p id="hotspot-card-subtitle" class="device-card-subtitle">显示设备 · 投影待机</p>
+                <p id="hotspot-card-description" class="device-card-description">连接会议主机与大屏幕布，用于投放会议议程、PPT 和视频会议画面，可延伸到 HDMI/无线投屏控制与树莓派显示输出实验。</p>
+                <div id="hotspot-card-meta" class="device-card-meta">
+                <div class="device-card-meta-row">
+                    <span>设备状态</span>
+                    <strong>投影待机</strong>
+                </div>
+            
+                <div class="device-card-meta-row">
+                    <span>联动结果</span>
+                    <strong>等待演示模式</strong>
+                </div>
+            
+                <div class="device-card-meta-row">
+                    <span>当前模式</span>
+                    <strong>专注讨论</strong>
+                </div>
+            </div>
+            </article>
+        </section>
+
+        <section class="panel log-panel">
+            <div class="panel-head">
+                <h2>系统日志</h2>
+                <span class="pill muted">近5条</span>
+            </div>
+            <div id="log-list" class="log-list">
+                <article class="log-item">
+                    <span class="log-time">19:10</span>
+                    <p class="log-text">页面初始化完成，已载入董事会议室联动面板。</p>
+                </article>
+            </div>
+        </section>
+    </aside>
+</div>
+
+<script type="module" src="/scripts/smart-room.js"></script>
+
+
+</body></html>

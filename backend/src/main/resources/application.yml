@@ -1,0 +1,73 @@
+app:
+  master:
+    key: 123456
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    url: jdbc:mysql://localhost:3306/meetingroom?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: meetingroom
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  mail:
+    username: 17638875766@163.com
+    password: FYb4msMRjwN9ZEHG
+    host: smtp.163.com
+    port: 465  # 添加这行，使用465端口
+    protocol: smtps
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true  # 465端口需要SSL
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+
+    redisson:
+      config: |
+        singleServerConfig:
+          address: "redis://127.0.0.1:6379"
+          database: ${spring.data.redis.database}
+          connectionMinimumIdleSize: 5
+          connectionPoolSize: 10
+          idleConnectionTimeout: 30000
+          connectTimeout: 10000
+          timeout: 3000
+
+
+aliyun:
+  oss:
+    endpoint: oss-cn-chengdu.aliyuncs.com
+    access-key-id: LTAI5tMXHs8LHiCJuTisSMNZ
+    access-key-secret: DyJOk3Y5kKIuXzdymbRXQy1fxFQZ2K
+    bucket-name: avatar-cloud-repository
+    base-url: https://avatar-cloud-repository.oss-cn-chengdu.aliyuncs.com
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.uestcfir.pojo.entity
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true

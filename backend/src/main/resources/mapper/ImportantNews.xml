@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.uestcfir.mapper.ImportantNewsMapper">
+
+    <resultMap id="ImportantNewsResultMap" type="com.uestcfir.pojo.entity.ImportantNews">
+        <id column="id" property="id" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="related_room_id" property="relatedRoomId" />
+        <result column="news_type" property="newsType" />
+        <result column="start_time" property="startTime" />
+        <result column="end_time" property="endTime" />
+        <result column="severity" property="severity" />
+        <result column="status" property="status" />
+        <result column="publisher_id" property="publisherId" />
+        <result column="publisher_name" property="publisherName" />
+        <result column="create_time" property="createTime" />
+    </resultMap>
+
+    <!-- 插入重要事件 -->
+    <insert id="insertImportantNews" parameterType="com.uestcfir.pojo.entity.ImportantNews">
+        INSERT INTO importantnews
+        (title, content, related_room_id, news_type, start_time, end_time, severity, status, publisher_id, publisher_name, create_time)
+        VALUES
+            (#{title}, #{content}, #{relatedRoomId}, #{newsType}, #{startTime}, #{endTime}, #{severity}, #{status}, #{publisherId}, #{publisherName}, #{createTime})
+    </insert>
+
+    <!-- 查询所有重要事件 -->
+    <select id="selectAllImportantNews" resultMap="ImportantNewsResultMap">
+        SELECT * FROM importantnews ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据状态查询重要事件 -->
+    <select id="selectImportantNewsByStatus" resultMap="ImportantNewsResultMap">
+        SELECT * FROM importantnews WHERE status = #{status} ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据ID查询重要事件 -->
+    <select id="selectImportantNewsById" resultMap="ImportantNewsResultMap">
+        SELECT * FROM importantnews WHERE id = #{id}
+    </select>
+
+    <!-- 更新重要事件信息 -->
+    <update id="updateImportantNews" parameterType="com.uestcfir.pojo.entity.ImportantNews">
+        UPDATE importantnews
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="relatedRoomId != null">related_room_id = #{relatedRoomId},</if>
+            <if test="newsType != null">news_type = #{newsType},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="severity != null">severity = #{severity},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="publisherId != null">publisher_id = #{publisherId},</if>
+            <if test="publisherName != null">publisher_name = #{publisherName},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除重要事件 -->
+    <delete id="deleteImportantNews">
+        DELETE FROM importantnews WHERE id = #{id}
+    </delete>
+    <!-- 更新过期的重要信息状态 -->
+    <update id="updateExpiredNewsStatus">
+        UPDATE importantnews
+        SET status = '已过期'
+        WHERE status = '未过期'
+          AND end_time IS NOT NULL
+          AND end_time &lt; NOW()
+    </update>
+
+    <!--上传重要信息图片URL-->
+    <update id="uploadImportantNewsUrl">
+        UPDATE importantnews SET origin_image = #{originalFileUrl}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据严重程度和状态查询重要事件 -->
+    <select id="selectNewsBySeverityAndStatus" resultMap="ImportantNewsResultMap">
+        SELECT * FROM importantnews
+        WHERE severity = #{severity}
+          AND status = #{status}
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,635 @@
+:root {
+    --bg: #edf4ef;
+    --bg-accent: #f7f3e8;
+    --surface: rgba(255, 255, 255, 0.78);
+    --surface-strong: rgba(255, 255, 255, 0.9);
+    --stroke: rgba(152, 164, 149, 0.16);
+    --text: #1f2b27;
+    --text-soft: #68776f;
+    --accent: #c9793d;
+    --accent-soft: rgba(201, 121, 61, 0.14);
+    --success: #3c9b6a;
+    --success-soft: rgba(60, 155, 106, 0.14);
+    --warning: #d08a3c;
+    --shadow: 0 28px 60px rgba(111, 129, 117, 0.15);
+    --radius-xl: 32px;
+    --radius-lg: 24px;
+    --radius-md: 18px;
+    --radius-sm: 14px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at 12% 18%, rgba(255, 243, 221, 0.92), transparent 22%),
+        radial-gradient(circle at 85% 14%, rgba(222, 234, 226, 0.9), transparent 28%),
+        radial-gradient(circle at 25% 85%, rgba(219, 236, 231, 0.85), transparent 24%),
+        linear-gradient(135deg, #eef4ef 0%, #f7f2e8 48%, #edf5ef 100%);
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent 12%, transparent 88%, rgba(255, 255, 255, 0.2)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 16%);
+    mix-blend-mode: screen;
+}
+
+.smart-room-app {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(620px, 1.8fr) minmax(320px, 0.95fr);
+    gap: 18px;
+    padding: 26px;
+    min-height: 100vh;
+}
+
+.rail,
+.workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.72));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+}
+
+.hero-panel,
+.stack-panel,
+.detail-panel,
+.status-panel,
+.hotspot-panel,
+.log-panel {
+    padding: 26px;
+}
+
+.banner-panel {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 30px 34px;
+}
+
+.banner-copy {
+    max-width: 820px;
+}
+
+.banner-panel h2,
+.hero-panel h1 {
+    margin: 0;
+    font-size: clamp(2rem, 2.8vw, 3.45rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    font-weight: 800;
+}
+
+.hero-panel h1 {
+    margin-top: 14px;
+}
+
+.hero-copy,
+.banner-description,
+.detail-copy,
+.device-card-description,
+.status-copy {
+    margin: 18px 0 0;
+    color: var(--text-soft);
+    line-height: 1.8;
+    font-size: 1.02rem;
+}
+
+.eyebrow {
+    margin: 0;
+    font-size: 0.86rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.banner-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    gap: 18px;
+    flex: 1;
+    align-self: stretch;
+}
+
+.stat-card {
+    padding: 22px;
+    border-radius: var(--radius-lg);
+    background: var(--surface-strong);
+    border: 1px solid rgba(184, 195, 189, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+}
+
+.stat-label {
+    color: var(--text-soft);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.stat-value {
+    font-size: 3.2rem;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.stat-note {
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+.panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.panel-head h2,
+.panel-head h3,
+.viewer-topbar h3,
+.status-panel h3,
+.device-card h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.switch-list,
+.status-list,
+.detail-points,
+.log-list,
+.camera-controls,
+.hotspot-tabs,
+.device-toggle-grid,
+.preset-group {
+    display: grid;
+    gap: 14px;
+}
+
+.switch-list {
+    grid-template-columns: 1fr;
+}
+
+.switch-card,
+.status-row,
+.log-item,
+.control-button,
+.viewer-tag,
+.device-toggle {
+    border: 1px solid rgba(174, 186, 180, 0.18);
+    background: rgba(248, 250, 248, 0.9);
+    border-radius: 22px;
+}
+
+.switch-card {
+    padding: 20px 22px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.switch-card:hover,
+.device-toggle:hover,
+.control-button:hover,
+.hotspot-tab:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 20px rgba(111, 129, 117, 0.09);
+}
+
+.switch-card.active,
+.device-toggle.active,
+.control-button.active,
+.hotspot-tab.active {
+    background: linear-gradient(135deg, rgba(255, 244, 233, 0.96), rgba(247, 239, 226, 0.86));
+    border-color: rgba(201, 121, 61, 0.36);
+    box-shadow: 0 16px 28px rgba(201, 121, 61, 0.12);
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-soft);
+    background: rgba(236, 241, 238, 0.92);
+}
+
+.pill.success {
+    color: var(--success);
+    background: var(--success-soft);
+}
+
+.pill.warning {
+    color: var(--warning);
+    background: rgba(208, 138, 60, 0.14);
+}
+
+.pill.accent-soft {
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.viewer-panel {
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 980px;
+}
+
+.viewer-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.preset-group {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 360px;
+}
+
+.preset-button,
+.control-button,
+.hotspot-tab {
+    appearance: none;
+    border: 1px solid rgba(174, 186, 180, 0.2);
+    background: rgba(243, 246, 243, 0.92);
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 22px;
+    cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.preset-button {
+    min-height: 70px;
+}
+
+.scene-shell {
+    position: relative;
+    min-height: 680px;
+    border-radius: 28px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(229, 237, 248, 0.96), rgba(216, 228, 241, 0.86));
+    border: 1px solid rgba(150, 167, 184, 0.22);
+}
+
+.scene-canvas {
+    position: absolute;
+    inset: 0;
+}
+
+.scene-iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    display: none;
+}
+
+.scene-iframe.active {
+    display: block;
+}
+
+.hotspot-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.hotspot-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.hotspot-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ffffff, #d2ad8d 42%, #c97a40 80%);
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 10px rgba(201, 121, 61, 0.14);
+}
+
+.hotspot-marker.active .hotspot-pin {
+    box-shadow: 0 0 0 12px rgba(60, 155, 106, 0.16);
+}
+
+.hotspot-badge {
+    border: none;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    box-shadow: 0 14px 30px rgba(86, 98, 91, 0.14);
+    cursor: pointer;
+}
+
+.dev-note {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    max-width: 360px;
+    padding: 18px 20px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(193, 205, 198, 0.24);
+    box-shadow: 0 20px 30px rgba(88, 101, 93, 0.12);
+}
+
+.dev-note strong {
+    color: var(--accent);
+    display: block;
+    margin-bottom: 10px;
+}
+
+.dev-note p,
+.dev-note code {
+    margin: 0;
+    color: var(--text-soft);
+    line-height: 1.75;
+}
+
+.camera-controls {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.control-button,
+.preset-button,
+.hotspot-tab {
+    min-height: 68px;
+}
+
+.viewer-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.viewer-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 46px;
+    padding: 0 18px;
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.device-toggle-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.device-toggle {
+    padding: 18px;
+    min-height: 102px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.device-toggle:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.device-toggle.pending {
+    border-color: rgba(199, 113, 36, 0.42);
+}
+
+.device-toggle-name {
+    font-size: 0.92rem;
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.device-toggle-value {
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.detail-points {
+    margin: 18px 0 0;
+    padding-left: 1.4rem;
+    color: var(--text);
+    line-height: 1.9;
+    font-size: 1rem;
+}
+
+.status-row {
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+}
+
+.status-row-label {
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.status-row-value {
+    font-size: 1rem;
+    font-weight: 800;
+    text-align: right;
+}
+
+.hotspot-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.device-card {
+    margin-top: 18px;
+    padding: 22px;
+    border-radius: 30px;
+    border: 1px solid rgba(174, 186, 180, 0.18);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.device-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+}
+
+.device-card-subtitle {
+    margin: 10px 0 0;
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.device-card-meta {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.device-card-meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(174, 186, 180, 0.28);
+    color: var(--text-soft);
+}
+
+.device-card-meta-row strong {
+    color: var(--text);
+}
+
+.log-list {
+    grid-template-columns: 1fr;
+}
+
+.log-item {
+    padding: 20px;
+}
+
+.log-time {
+    display: inline-block;
+    color: var(--accent);
+    font-size: 0.96rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.log-text {
+    margin: 0;
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 1rem;
+}
+
+code {
+    font-family: "Cascadia Code", "Consolas", monospace;
+}
+
+@media (max-width: 1540px) {
+    .smart-room-app {
+        grid-template-columns: minmax(260px, 0.9fr) minmax(520px, 1.7fr) minmax(300px, 0.95fr);
+    }
+
+    .banner-panel {
+        flex-direction: column;
+    }
+
+    .banner-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .preset-group,
+    .camera-controls,
+    .device-toggle-grid,
+    .hotspot-tabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1200px) {
+    .smart-room-app {
+        grid-template-columns: 1fr;
+    }
+
+    .viewer-panel {
+        min-height: auto;
+    }
+
+    .scene-shell {
+        min-height: 560px;
+    }
+
+    .preset-group,
+    .camera-controls,
+    .device-toggle-grid,
+    .hotspot-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .smart-room-app {
+        padding: 14px;
+    }
+
+    .hero-panel,
+    .stack-panel,
+    .detail-panel,
+    .status-panel,
+    .hotspot-panel,
+    .log-panel,
+    .viewer-panel,
+    .banner-panel {
+        padding: 20px;
+    }
+
+    .scene-shell {
+        min-height: 420px;
+    }
+
+    .banner-stats,
+    .preset-group,
+    .camera-controls,
+    .device-toggle-grid,
+    .hotspot-tabs {
+        grid-template-columns: 1fr;
+    }
+
+    .device-card-head,
+    .panel-head,
+    .viewer-topbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .stat-value {
+        font-size: 2.4rem;
+    }
+}

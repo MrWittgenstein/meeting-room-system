@@ -1,0 +1,128 @@
+{
+  "device": {
+    "device_id": "raspi-01",
+    "room_id": 14,
+    "room_code": "meeting_room_14"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8775,
+    "sample_interval_seconds": 5,
+    "history_size": 100,
+    "ping_interval_seconds": 20,
+    "ping_timeout_seconds": 20
+  },
+  "runtime": {
+    "demo_mode": false,
+    "log_level": "INFO"
+  },
+  "backend": {
+    "enabled": true,
+    "websocket_url": "ws://192.168.5.8:8080/iot/ws/device",
+    "reconnect_delay_seconds": 5
+  },
+  "dht": {
+    "enabled": true,
+    "type": "DHT11",
+    "gpio_pin": 17,
+    "read_retries": 3,
+    "retry_delay_seconds": 2,
+    "default_temperature": 25.0,
+    "default_humidity": 50.0
+  },
+  "pcf8591": {
+    "enabled": true,
+    "i2c_bus": 1,
+    "address": "0x48"
+  },
+  "light": {
+    "enabled": true,
+    "channel": 0,
+    "default": 128,
+    "invert": true
+  },
+  "smoke": {
+    "enabled": true,
+    "channel": 1,
+    "default": 0,
+    "threshold": 100
+  },
+  "pir": {
+    "enabled": true,
+    "gpio_pin": 27
+  },
+  "distance": {
+    "enabled": true,
+    "trig_pin": 23,
+    "echo_pin": 24,
+    "default_cm": 400.0,
+    "timeout_seconds": 0.1,
+    "door_open_below_cm": 30.0
+  },
+  "servo": {
+    "enabled": true,
+    "gpio_pin": 18,
+    "pwm_hz": 50,
+    "closed_angle": 0,
+    "open_angle": 90
+  },
+  "face_recognition": {
+    "enabled": true,
+    "camera_index": 0,
+    "width": 640,
+    "height": 480,
+    "fps": 20,
+    "process_width": 480,
+    "database": "data/face_db.npz",
+    "yunet_model": "models/face_detection_yunet_2023mar.onnx",
+    "sface_model": "models/face_recognition_sface_2021dec.onnx",
+    "detector_score_threshold": 0.8,
+    "metric": "cosine",
+    "match_threshold": null,
+    "authorized_names": [],
+    "open_door_on_authorized": true,
+    "door_open_seconds": 5
+  },
+  "outputs": {
+    "projector": {
+      "enabled": false,
+      "gpio_pin": 5,
+      "active_high": true
+    },
+    "light": {
+      "enabled": false,
+      "gpio_pin": 6,
+      "active_high": true
+    },
+    "curtain": {
+      "enabled": false,
+      "gpio_pin": 13,
+      "active_high": true
+    },
+    "buzzer": {
+      "enabled": false,
+      "gpio_pin": 26,
+      "active_high": true
+    },
+    "cooling": {
+      "enabled": false,
+      "gpio_pin": 16,
+      "active_high": true
+    },
+    "heating": {
+      "enabled": false,
+      "gpio_pin": 20,
+      "active_high": true
+    },
+    "humidifier": {
+      "enabled": false,
+      "gpio_pin": 21,
+      "active_high": true
+    },
+    "dehumidifier": {
+      "enabled": false,
+      "gpio_pin": 12,
+      "active_high": true
+    }
+  }
+}

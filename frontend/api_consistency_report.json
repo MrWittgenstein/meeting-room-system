@@ -1,0 +1,238 @@
+{
+  "totalFiles": 22,
+  "diffFiles": 1,
+  "results": [
+    {
+      "file": "managerappoint.js",
+      "totalLines": 47,
+      "diffCount": 45,
+      "diffLines": [
+        {
+          "line": 2,
+          "style": "// 获取本地存储的管理员token",
+          "interface": "import { ref } from 'vue'"
+        },
+        {
+          "line": 3,
+          "style": "const token = localStorage.getItem('token') || ''",
+          "interface": "// 获取本地存储的管理员token"
+        },
+        {
+          "line": 4,
+          "style": "",
+          "interface": "const token = localStorage.getItem('token') || ''"
+        },
+        {
+          "line": 5,
+          "style": "/**",
+          "interface": ""
+        },
+        {
+          "line": 6,
+          "style": " * 获取已审批会议列表（对接接口：GET /approver/reservation/getlist）",
+          "interface": "/**"
+        },
+        {
+          "line": 7,
+          "style": " * @param {Object} params - 查询参数",
+          "interface": " * 获取已审批会议列表（对接接口：GET /approver/reservation/getlist）"
+        },
+        {
+          "line": 8,
+          "style": " * @param {number} params.page - 页码",
+          "interface": " * @param {Object} params - 查询参数"
+        },
+        {
+          "line": 9,
+          "style": " * @param {number} params.size - 每页条数",
+          "interface": " * @param {number} params.page - 页码"
+        },
+        {
+          "line": 10,
+          "style": " * @param {string} [params.roomType] - 会议室类型筛选",
+          "interface": " * @param {number} params.size - 每页条数"
+        },
+        {
+          "line": 11,
+          "style": " * @returns {Promise} - 请求结果",
+          "interface": " * @param {string} [params.roomType] - 会议室类型筛选"
+        },
+        {
+          "line": 12,
+          "style": " */",
+          "interface": " * @returns {Promise} - 请求结果"
+        },
+        {
+          "line": 13,
+          "style": "export const getApprovedListAPI = (params) => {",
+          "interface": " */"
+        },
+        {
+          "line": 14,
+          "style": "  return httpInstance({",
+          "interface": "export const getApprovedListAPI = (params) => {"
+        },
+        {
+          "line": 15,
+          "style": "    url: 'approver/reservation/getlist',",
+          "interface": "  return httpInstance({"
+        },
+        {
+          "line": 16,
+          "style": "    method: 'get',",
+          "interface": "    url: 'approver/reservation/getlist',"
+        },
+        {
+          "line": 17,
+          "style": "    headers: {",
+          "interface": "    method: 'get',"
+        },
+        {
+          "line": 18,
+          "style": "      'Authorization': `Bearer ${token}`",
+          "interface": "    headers: {"
+        },
+        {
+          "line": 19,
+          "style": "    },",
+          "interface": "      'Authorization': `Bearer ${token}`"
+        },
+        {
+          "line": 20,
+          "style": "",
+          "interface": "    },"
+        },
+        {
+          "line": 21,
+          "style": "    params: {",
+          "interface": ""
+        },
+        {
+          "line": 22,
+          "style": "      page: 1,",
+          "interface": "    params: {"
+        },
+        {
+          "line": 23,
+          "style": "      size: 20,",
+          "interface": "      page: 1,"
+        },
+        {
+          "line": 24,
+          "style": "      ...params",
+          "interface": "      size: 20,"
+        },
+        {
+          "line": 25,
+          "style": "    }",
+          "interface": "      ...params"
+        },
+        {
+          "line": 26,
+          "style": "  })",
+          "interface": "    }"
+        },
+        {
+          "line": 27,
+          "style": "}",
+          "interface": "  })"
+        },
+        {
+          "line": 28,
+          "style": "",
+          "interface": "}"
+        },
+        {
+          "line": 29,
+          "style": "/**",
+          "interface": ""
+        },
+        {
+          "line": 30,
+          "style": " * 删除已审批会议记录（对接接口：DELETE /user/cancelreservation）",
+          "interface": "/**"
+        },
+        {
+          "line": 31,
+          "style": " * @param {number} reservationId - 会议预约ID",
+          "interface": " * 删除已审批会议记录（对接接口：DELETE /user/cancelreservation）"
+        },
+        {
+          "line": 32,
+          "style": " * @returns {Promise} - 请求结果",
+          "interface": " * @param {number} reservationId - 会议预约ID"
+        },
+        {
+          "line": 33,
+          "style": " */",
+          "interface": " * @returns {Promise} - 请求结果"
+        },
+        {
+          "line": 34,
+          "style": "export const deleteApprovedRecordAPI = (reservationId) => {",
+          "interface": " */"
+        },
+        {
+          "line": 35,
+          "style": "  return httpInstance({",
+          "interface": "export const deleteApprovedRecordAPI = (reservationId) => {"
+        },
+        {
+          "line": 36,
+          "style": "    url: 'user/cancelreservation',",
+          "interface": "  return httpInstance({"
+        },
+        {
+          "line": 37,
+          "style": "    method: 'delete',",
+          "interface": "    url: 'user/cancelreservation',"
+        },
+        {
+          "line": 38,
+          "style": "    headers: {",
+          "interface": "    method: 'delete',"
+        },
+        {
+          "line": 39,
+          "style": "      'Authorization': `Bearer ${token}`",
+          "interface": "    headers: {"
+        },
+        {
+          "line": 40,
+          "style": "    },",
+          "interface": "      'Authorization': `Bearer ${token}`"
+        },
+        {
+          "line": 41,
+          "style": "    params: {",
+          "interface": "    },"
+        },
+        {
+          "line": 42,
+          "style": "      reservationId // 接口必填参数：会议预约ID",
+          "interface": "    params: {"
+        },
+        {
+          "line": 43,
+          "style": "    }",
+          "interface": "      reservationId // 接口必填参数：会议预约ID"
+        },
+        {
+          "line": 44,
+          "style": "  })",
+          "interface": "    }"
+        },
+        {
+          "line": 45,
+          "style": "}",
+          "interface": "  })"
+        },
+        {
+          "line": 46,
+          "style": "",
+          "interface": "}"
+        }
+      ]
+    }
+  ]
+}

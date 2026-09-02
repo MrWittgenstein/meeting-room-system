@@ -1,0 +1,34 @@
+// 主题色 - 以rgb(179, 219, 225)为主色调
+$primaryColor: rgb(179, 219, 225); // 主色调 - 清新蓝绿色
+$secondaryColor: rgb(239, 195, 221); // 辅助色 - 柔和粉色
+$accentColor: rgb(197, 186, 233); // 强调色 - 柔和紫色
+$helpColor: rgb(244, 162, 175); // 帮助色 - 柔和红色
+$sucColor: rgb(148, 226, 213); // 成功色 - 柔和绿色
+$warnColor: rgb(252, 207, 134); // 警告色 - 柔和黄色
+$priceColor: rgb(244, 162, 175); // 价格色 - 柔和红色
+
+// 玻璃质感相关变量 - 增强透明度和模糊度
+$glassBgOpacity: 0.8;
+$glassBlur: 15px;
+$glassBorderOpacity: 0.3;
+$glassShadow: 0 12px 40px rgba(31, 38, 135, 0.15);
+
+// 3D效果变量 - 增强立体感
+$boxShadowLight: 0 8px 20px rgba(0, 0, 0, 0.08);
+$boxShadowMedium: 0 15px 40px rgba(0, 0, 0, 0.12);
+$boxShadowHeavy: 0 25px 60px rgba(0, 0, 0, 0.18);
+$boxShadow3D: 
+  0 10px 20px rgba(0, 0, 0, 0.1),
+  0 0 0 1px rgba(179, 219, 225, 0.3),
+  inset 0 2px 4px rgba(255, 255, 255, 0.8),
+  inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+
+// 圆角变量 - 统一圆角风格
+$radiusSmall: 12px;
+$radiusMedium: 20px;
+$radiusLarge: 28px;
+$radiusCircle: 50%;
+
+// 3D变换变量
+$perspective: 1000px;
+$translateZ: 10px;
