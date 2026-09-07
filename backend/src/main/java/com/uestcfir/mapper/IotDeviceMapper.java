@@ -1,10 +1,13 @@
 package com.uestcfir.mapper;
 
 import com.uestcfir.pojo.entity.IotDevice;
+import com.uestcfir.pojo.vo.IotControlRoomVo;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 @Mapper
 public interface IotDeviceMapper {
@@ -53,4 +56,19 @@ public interface IotDeviceMapper {
             WHERE device_id = #{deviceId}
             """)
     IotDevice findByDeviceId(@Param("deviceId") String deviceId);
+
+    @Select("""
+            SELECT
+                d.room_id AS roomId,
+                r.room_number AS roomNumber,
+                r.room_name AS roomName,
+                r.status AS roomStatus,
+                d.device_id AS deviceId
+            FROM iot_device d
+            INNER JOIN meetingroom r ON r.room_id = d.room_id
+            WHERE r.status = 0
+            ORDER BY r.room_number, r.room_id, d.device_id
+            """)
+    List<IotControlRoomVo> findControlRooms();
+
 }

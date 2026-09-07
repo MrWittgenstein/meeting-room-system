@@ -34,7 +34,7 @@ public interface ReservationMapper {
      * @param date
      * @return Reservations
      */
-    @Select("select * from reservations where room_id = #{room_id} and reserve_date = #{date} and (status = 0 or status = 4) order by start_time")
+    @Select("select * from reservations where room_id = #{room_id} and reserve_date = #{date} and (status = 0 or status = 4) order by start_time for update")
     List<Reservations> findAllReservationsOfAvailableRoom(Integer room_id, LocalDate date);
 
 
@@ -85,6 +85,21 @@ public interface ReservationMapper {
     @Select("SELECT * FROM reservations WHERE reserve_date = CURRENT_DATE AND start_time BETWEEN #{startTime} AND #{endTime} AND (status = 0 or status = 4)")
     List<Reservations> findUpcomingReservations(@Param("startTime") LocalTime startTime, @Param("endTime") LocalTime endTime);
 
+    @Select("""
+            SELECT COUNT(*) > 0
+            FROM reservations
+            WHERE user_id = #{userId}
+              AND room_id = #{roomId}
+              AND reserve_date = #{date}
+              AND start_time <= #{time}
+              AND end_time >= #{time}
+              AND status IN (3, 4)
+            """)
+    boolean existsActiveReservation(@Param("userId") Integer userId,
+                                    @Param("roomId") Integer roomId,
+                                    @Param("date") LocalDate date,
+                                    @Param("time") LocalTime time);
+
 
     /**
      * 查询所有需要更新状态的预约（已通过的预约）
@@ -106,4 +121,3 @@ public interface ReservationMapper {
     @Select("SELECT reservation_id, state FROM reservations WHERE status = 2")
     List<Reservations> selectExpiredReservations();
 }
-

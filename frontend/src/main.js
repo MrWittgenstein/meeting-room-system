@@ -11,18 +11,8 @@ import zhCn from 'element-plus/dist/locale/zh-cn.mjs'   //导入element-plus的�
 import '@/styles/common.scss'
 // 引入Element Plus样式
 import 'element-plus/dist/index.css'
-import { getMeetingRoomList, pendingApprovalList } from '@/apis/meetingRoomList.js'
 
 const app = createApp(App)
-getMeetingRoomList().then(() => {
-    //console.log('会议室列表接口返回的数据：', res.data)
-})
-pendingApprovalList(0).then(() => {
-   // console.log('待审批列表接口返回的数据：', res.data)
-})
-pendingApprovalList(1).then(() => {
-    //console.log('已审批列表接口返回的数据：', res.data)
-})
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component)

@@ -384,6 +384,7 @@ const img = ref('/lsj.jpg') // 默认头像
 const name = ref('临时测试用户') // 默认名称
 // 退出登录
 const handleExit = () => {
+  localStorage.removeItem('sessionId');
   localStorage.removeItem('token');
   router.push('/');
 };

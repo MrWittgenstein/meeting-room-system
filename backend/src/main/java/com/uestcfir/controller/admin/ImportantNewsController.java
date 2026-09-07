@@ -1,138 +1,88 @@
 package com.uestcfir.controller.admin;
 
-import com.uestcfir.enumeration.user.UserType;
-import com.uestcfir.exception.BusinessException;
+import com.uestcfir.auth.CurrentUserContext;
+import com.uestcfir.auth.RolePermissionRegistry;
 import com.uestcfir.pojo.entity.ImageUploadResult;
 import com.uestcfir.pojo.entity.ImportantNews;
 import com.uestcfir.pojo.entity.Result;
 import com.uestcfir.service.ImportantNewsService;
 import com.uestcfir.service.impl.OssFileStorageService;
-import com.uestcfir.utils.JwtUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
 
-/**
- * 重要事件管理控制器
- */
-// 生成并上传缩略图
-
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/importantnews")
 public class ImportantNewsController {
-
-    @Autowired
-    private ImportantNewsService importantNewsService;
-
-    @Autowired
-    private OssFileStorageService ossFileStorageService;
+    private final ImportantNewsService importantNewsService;
+    private final OssFileStorageService ossFileStorageService;
 
     @PostMapping("/add")
-    public boolean addImportantNews(@RequestBody ImportantNews importantNews, @RequestHeader("Authorization") String authHeader) {
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-        if (userType != 0) {
-            throw new BusinessException("只有管理员才能添加重要事件");
-       }
-
-        // 设置发布人信息
-        importantNews.setPublisherId(userId);
-        // 设置创建时间为当前时间
+    public boolean addImportantNews(@RequestBody ImportantNews importantNews) {
+        requireManage();
+        importantNews.setPublisherId(CurrentUserContext.requireUserId());
         importantNews.setCreateTime(java.time.LocalDateTime.now());
-
         return importantNewsService.addImportantNews(importantNews);
     }
 
     @GetMapping("/all")
-    public List<ImportantNews> getAllImportantNews(@RequestHeader("Authorization") String authHeader) {
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-       // if (userType != 0) {
-     //       throw new BusinessException("只有管理员才能查看重要事件");
-    //    }
-
+    public List<ImportantNews> getAllImportantNews() {
+        CurrentUserContext.requirePermission(RolePermissionRegistry.NEWS_READ);
         return importantNewsService.getAllImportantNews();
     }
 
     @GetMapping("/status/valid")
-    public List<ImportantNews> getUnpublishedImportantNews(@RequestHeader("Authorization") String authHeader) {
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-        if (userType != 0) {
-            throw new BusinessException("只有管理员才能查看重要事件");
-        }
+    public List<ImportantNews> getUnpublishedImportantNews() {
+        requireManage();
         return importantNewsService.getImportantNewsByStatus("未过期");
     }
 
     @PutMapping("/update")
-    public boolean updateImportantNews(@RequestBody ImportantNews importantNews, @RequestHeader("Authorization") String authHeader) {
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-        if (userType != 0) {
-            throw new BusinessException("只有管理员才能修改重要事件");
-        }
+    public boolean updateImportantNews(@RequestBody ImportantNews importantNews) {
+        requireManage();
         return importantNewsService.updateImportantNews(importantNews);
     }
 
     @DeleteMapping("/{id}")
-    public boolean deleteImportantNews(@PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-        if (userType != 0) {
-            throw new BusinessException("只有管理员才能删除重要事件");
-        }
+    public boolean deleteImportantNews(@PathVariable Integer id) {
+        requireManage();
         return importantNewsService.deleteImportantNews(id);
     }
 
     @PostMapping("/uploadPicture")
-    public Result uploadPicture(@RequestPart("file") MultipartFile file,@RequestParam Integer id,@RequestHeader("Authorization") String authHeader){
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-        if (userType!= UserType.APPROVER.getCode()) {
-            throw new BusinessException("只有会议室管理员才能上传重要事件图片");
-        }
+    public Result uploadPicture(@RequestPart("file") MultipartFile file, @RequestParam Integer id) {
+        requireManage();
         try {
-            ImageUploadResult imageresult = ossFileStorageService.storeImportantNewsAvatar(id,file);
-            return Result.success(imageresult);
+            ImageUploadResult imageResult = ossFileStorageService.storeImportantNewsAvatar(id, file);
+            return Result.success(imageResult);
         } catch (IOException e) {
-            log.error("上传图片失败: {}", e.getMessage(), e);
-            return Result.fail("上传图片失败: " + e.getMessage());
+            log.error("upload important news image failed", e);
+            return Result.fail("上传图片失败");
         }
-
     }
 
-    /**
-     * 按优先级获取重要事件（最多8条）
-     * 按紧急→高→中→低的顺序补充
-     */
     @GetMapping("/priority")
-    public List<ImportantNews> getImportantNewsByPriority(@RequestHeader("Authorization") String authHeader) {
-        Integer[] userinfo = JwtUtil.validateToken(authHeader);
-        Integer userId = userinfo[0];
-        Integer userType = userinfo[1];
-
-
-      //  if (userType!= UserType.APPROVER.getCode()) {
-     //       throw new BusinessException("只有会议室管理员才能上传重要事件图片");
-     //   }
-
-
-
-        // 调用service方法，limit固定为8
+    public List<ImportantNews> getImportantNewsByPriority() {
+        CurrentUserContext.requirePermission(RolePermissionRegistry.NEWS_READ);
         return importantNewsService.getImportantNewsByPriority(8);
     }
 
-
-
+    private void requireManage() {
+        CurrentUserContext.requirePermission(RolePermissionRegistry.NEWS_MANAGE);
+    }
 }

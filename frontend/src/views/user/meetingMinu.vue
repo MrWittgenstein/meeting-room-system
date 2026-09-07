@@ -371,6 +371,7 @@ const handleResize = () => {
 
 // 退出登录
 const handleExit = () => {
+  localStorage.removeItem('sessionId')
   localStorage.removeItem('token')
   router.push('/')
   ElMessage.success('退出登录成功')

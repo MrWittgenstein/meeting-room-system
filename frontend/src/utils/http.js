@@ -1,45 +1,39 @@
-// axios基础的封装
 import axios from 'axios'
 import router from '@/router'
 import { ElMessage } from 'element-plus'
 
 const httpInstance = axios.create({
-  baseURL: 'http://8.141.97.91:8080',
-  timeout: 5000
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080',
+  timeout: 10000,
+  withCredentials: true
 })
-// 请求拦截器
+
 httpInstance.interceptors.request.use(config => {
-  // 在发送请求之前做些什么
-
-  const token = localStorage.getItem('token');
-  // 如果token存在，添加到请求头
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`; // 注意Bearer后的空格
+  // The backend stores this value as a Redis session id. Keep the legacy
+  // token fallback so an existing browser session is not logged out abruptly.
+  const sessionId = localStorage.getItem('sessionId') || localStorage.getItem('token')
+  if (sessionId) {
+    config.headers.SessionId = sessionId
   }
+
+  // Legacy API modules still add Authorization themselves. Remove it so all
+  // requests use the SessionId contract.
+  delete config.headers.Authorization
   return config
-}, error => {
-  // 对请求错误做些什么
-  return Promise.reject(error)
-})
+}, error => Promise.reject(error))
 
-// 响应拦截器
 httpInstance.interceptors.response.use(
-  response => {
-    return response;
-  },
+  response => response,
   error => {
-    // 处理401未授权错误（通常表示token无效或过期）
     if (error.response && error.response.status === 401) {
-      // 清除本地存储的token
-      localStorage.removeItem('token');
-      localStorage.removeItem('userInfo');
-      // 跳转到登录页
-      router.push('/');
-      // 提示用户重新登录
-      ElMessage.error('登录已过期，请重新登录');
+      localStorage.removeItem('sessionId')
+      localStorage.removeItem('token')
+      localStorage.removeItem('userInfo')
+      router.push('/')
+      ElMessage.error('登录已过期，请重新登录')
     }
-    return Promise.reject(error);
+    return Promise.reject(error)
   }
-);
+)
 
 export default httpInstance

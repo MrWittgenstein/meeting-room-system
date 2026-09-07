@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080'
+
 export function useIoTWebSocket() {
   const connected = ref(false)
   const temperature = ref(null)
@@ -25,7 +27,10 @@ export function useIoTWebSocket() {
 
   const pollLatest = async () => {
     try {
-      const res = await fetch('http://localhost:8080/iot/rooms/14/latest')
+      const res = await fetch(`${API_BASE_URL}/iot/rooms/14/latest`, {
+        headers: sessionHeaders(),
+        credentials: 'include'
+      })
       const json = await res.json()
       const env = json?.data?.environment
       if (env) {
@@ -54,7 +59,10 @@ export function useIoTWebSocket() {
 
   const pollLastSeven = async () => {
     try {
-      const res = await fetch('http://localhost:8080/iot/rooms/14/last-seven')
+      const res = await fetch(`${API_BASE_URL}/iot/rooms/14/last-seven`, {
+        headers: sessionHeaders(),
+        credentials: 'include'
+      })
       const json = await res.json()
       const list = json?.data || json || []
       if (Array.isArray(list) && list.length > 0) {
@@ -77,6 +85,11 @@ export function useIoTWebSocket() {
   const pollAll = async () => {
     await pollLastSeven()
     await pollLatest()
+  }
+
+  const sessionHeaders = () => {
+    const sessionId = localStorage.getItem('sessionId') || localStorage.getItem('token')
+    return sessionId ? { SessionId: sessionId } : {}
   }
 
   const connect = () => {

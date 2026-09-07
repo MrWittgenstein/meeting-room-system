@@ -75,5 +75,4 @@ public class ImportantNews {
      */
     private LocalDateTime createTime;
 
-
 }

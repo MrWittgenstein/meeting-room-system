@@ -2,7 +2,19 @@ app:
   master:
     key: 123456
 
+server:
+  port: ${MEETINGROOM_PORT:8081}
+
+auth:
+  session:
+    ttl: ${AUTH_SESSION_TTL:12h}
+
 spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   servlet:
     multipart:
       max-file-size: 10MB
@@ -50,11 +62,11 @@ spring:
 
 aliyun:
   oss:
-    endpoint: oss-cn-chengdu.aliyuncs.com
-    access-key-id: LTAI5tMXHs8LHiCJuTisSMNZ
-    access-key-secret: DyJOk3Y5kKIuXzdymbRXQy1fxFQZ2K
-    bucket-name: avatar-cloud-repository
-    base-url: https://avatar-cloud-repository.oss-cn-chengdu.aliyuncs.com
+    endpoint: oss-cn-beijing.aliyuncs.com
+    access-key-id: LTAI5t97DWsUbDe1f5XS5mQr
+    access-key-secret: M7KBp5nXHcnA24uazTScSOwIpZl2vH
+    bucket-name: javasyl
+    base-url: https://javasyl.oss-cn-beijing.aliyuncs.com
 
 
 springdoc:

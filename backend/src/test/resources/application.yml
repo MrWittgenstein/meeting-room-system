@@ -1,0 +1,43 @@
+app:
+  master:
+    key: test-only-master-key
+
+auth:
+  session:
+    ttl: 30m
+
+spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+  datasource:
+    url: jdbc:mysql://localhost:3306/meetingroom?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: meetingroom
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+  mail:
+    host: localhost
+    port: 2525
+    username: test@example.com
+    password: test
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.uestcfir.pojo.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+aliyun:
+  oss:
+    endpoint: oss-cn-chengdu.aliyuncs.com
+    access-key-id: test
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    bucket-name: test
+    base-url: https://example.invalid
