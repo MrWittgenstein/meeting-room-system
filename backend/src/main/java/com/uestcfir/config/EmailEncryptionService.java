@@ -16,7 +16,7 @@ import java.util.Base64;
 @Service
 public class EmailEncryptionService {
 
-    @Value("${app.master.key:123456}")
+    @Value("${app.master.key:}")
     private String masterKey;
 
     private static final String ALGORITHM = "AES";

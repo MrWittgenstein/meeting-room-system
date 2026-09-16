@@ -1,134 +1,109 @@
 package com.uestcfir.service.impl;
 
+import com.uestcfir.auth.RbacService;
 import com.uestcfir.config.EmailEncryptionService;
 import com.uestcfir.exception.BusinessException;
 import com.uestcfir.mapper.UserMapper;
 import com.uestcfir.pojo.entity.User;
 import com.uestcfir.service.UserAdminService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class UserAdminServiceImpl implements UserAdminService {
-
-
-    @Autowired
-    EmailEncryptionService encryptionService;
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    PasswordEncoder passwordEncoder;
+    private final EmailEncryptionService encryptionService;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+    private final RbacService rbacService;
 
     @Override
     public User getUserById(Integer id) {
-        // 调用你Mapper中实际存在的方法
         return userMapper.selectUserById(id);
     }
 
     @Override
     public List<User> getAllUsers() {
-        // 使用分页方法获取所有用户，设置较大的size
         return userMapper.selectUsersWithPage(null, 0, 1000);
     }
 
     @Override
+    @Transactional
     public boolean addUser(User user) throws Exception {
-        // 1. 从user对象中获取原始邮箱
         String originalEmail = user.getEmail();
-
-        // 2. 计算邮箱哈希值
         String emailHash = encryptionService.computeEmailHash(originalEmail);
-
-        // 3. 检查邮箱是否已注册
         if (userMapper.existsByEmailHash(emailHash)) {
             throw new BusinessException("邮箱已被注册");
         }
-
-        // 4. 加密邮箱
-        String encryptedEmail = encryptionService.encryptEmail(originalEmail);
-
-        // 5. 设置加密字段到user对象
         user.setEmailHash(emailHash);
-        user.setEmail(encryptedEmail);
-        //加密密码，单向加密
+        user.setEmail(encryptionService.encryptEmail(originalEmail));
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setCreateTime(user.getCreateTime() == null ? LocalDateTime.now() : user.getCreateTime());
+        user.setUpdateTime(LocalDateTime.now());
+        user.setStatus(user.getStatus() == null ? 0 : user.getStatus());
+        user.setIntegral(user.getIntegral() == null ? 0 : user.getIntegral());
 
-        return userMapper.insertUser(user);
+        boolean inserted = userMapper.insertUser(user);
+        if (inserted) {
+            rbacService.replaceLegacyRole(user.getUserId(), user.getUserType());
+        }
+        return inserted;
     }
 
     @Override
+    @Transactional
     public boolean updateUser(User user) {
-        //加密邮箱
-        String enencryption = encryptionService.encryptEmail(user.getEmail());
-        user.setEmail(enencryption);
-        //加密密码
-        String enpassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(enpassword);
-
-        return userMapper.updateUser(user);
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            user.setEmailHash(encryptionService.computeEmailHash(user.getEmail()));
+            user.setEmail(encryptionService.encryptEmail(user.getEmail()));
+        }
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+        boolean updated = userMapper.updateUser(user);
+        if (updated && user.getUserType() != null) {
+            rbacService.replaceLegacyRole(user.getUserId(), user.getUserType());
+        }
+        return updated;
     }
 
     @Override
     public boolean deleteUser(Integer id) {
-
         return userMapper.deleteUser(id);
     }
 
-
-
-
-
     @Override
     public User getUserByUsername(String username) {
-        // 你的Mapper中没有selectByUsername方法，需要添加或使用其他方式
-        // 暂时使用分页查询来实现
-        List<User> users = userMapper.selectUsersWithPage(username, 0, 1);
-        return users.isEmpty() ? null : users.get(0);
+        return userMapper.selectByUsername(username);
     }
 
     @Override
     public List<User> getUsersByType(Integer userType) {
-        // 你的Mapper中没有selectByUserType方法
-        // 暂时使用分页查询所有，然后在Service层过滤
-        List<User> allUsers = getAllUsers();
-        return allUsers.stream()
-                .filter(user -> userType.equals(user.getUserType()))
-                .collect(java.util.stream.Collectors.toList());
+        return userMapper.selectByUserType(userType);
     }
 
-
-
-
-
-    // 新增方法：检查用户名是否存在
     public boolean checkUsernameExists(String username) {
         return userMapper.existsByUsername(username);
     }
 
-    // 新增方法：检查邮箱是否存在
     public boolean checkEmailExists(String email) {
         return userMapper.existsByEmail(email);
     }
 
-    // 新增方法：获取用户统计信息
     public Long getTotalUserCount() {
         return userMapper.countTotalUsers();
     }
 
-    // 新增方法：分页查询用户
     public List<User> getUsersByPage(String keyword, int page, int size) {
-        int offset = (page - 1) * size;
-        return userMapper.selectUsersWithPage(keyword, offset, size);
+        return userMapper.selectUsersWithPage(keyword, (page - 1) * size, size);
     }
 
-    // 新增方法：获取用户数量
     public Long getUserCount(String keyword) {
         return userMapper.countUsers(keyword);
     }
-
-
-
 }

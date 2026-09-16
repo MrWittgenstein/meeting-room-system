@@ -20,7 +20,8 @@
     </resultMap>
 
     <!-- 插入用户 -->
-    <insert id="insertUser" parameterType="com.uestcfir.pojo.entity.User">
+    <insert id="insertUser" parameterType="com.uestcfir.pojo.entity.User"
+            useGeneratedKeys="true" keyProperty="userId" keyColumn="user_id">
         INSERT INTO user
         (username, password, real_name, email, phone, user_type, status, integral, create_time, update_time,email_hash)
         VALUES

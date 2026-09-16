@@ -1,5 +1,10 @@
 import httpInstance from '@/utils/http'
 
+export const getControlRoomsAPI = () => httpInstance({
+  url: '/iot/control-rooms',
+  method: 'get'
+})
+
 /**
  * 获取用户信息
  */
@@ -23,3 +28,14 @@ export const getUserInfoAPI = () => {
     }
   })
 }
+
+export const sendDeviceCommandAPI = (deviceId, command) => httpInstance({
+  url: `/iot/devices/${encodeURIComponent(deviceId)}/commands`,
+  method: 'post',
+  data: command
+})
+
+export const getDeviceControlAccessAPI = (deviceId) => httpInstance({
+  url: `/iot/devices/${encodeURIComponent(deviceId)}/control-access`,
+  method: 'get'
+})

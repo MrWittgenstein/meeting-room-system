@@ -398,18 +398,20 @@ const handleLogin = async () => {
     // 检查后端返回的成功标识
     if (res.data.code === 1 && res.data.message === 'success') {
       ElMessage.success('登录成功')
-      const { token, userType } = res.data.data;
+      const { token, sessionId, userType, role } = res.data.data;
+      const activeSessionId = sessionId || token;
 
-      if (!token) {
-        throw new Error('未获取到令牌')
+      if (!activeSessionId) {
+        throw new Error('未获取到会话')
       }
 
-      // 保存到本地存储
-      localStorage.setItem('token', token);
+      localStorage.setItem('sessionId', activeSessionId)
+      localStorage.removeItem('token')
       localStorage.setItem('userInfo', JSON.stringify(res.data.data));
 
       // 根据用户类型跳转
-      if(userType === '会议室管理员') {
+      if (['会议室管理员', '超级管理员'].includes(userType)
+        || ['room_admin', 'super_admin'].includes(role)) {
         await router.push('/manager')
       } else if (userType === '普通用户') {
         await router.push('/user/home')

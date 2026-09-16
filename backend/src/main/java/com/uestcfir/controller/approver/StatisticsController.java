@@ -1,6 +1,8 @@
 package com.uestcfir.controller.approver;
 
 
+import com.uestcfir.auth.CurrentUserContext;
+import com.uestcfir.auth.RolePermissionRegistry;
 import com.uestcfir.pojo.dto.AdminStatisticsDTO;
 import com.uestcfir.pojo.dto.FrequencyQueryDTO;
 import com.uestcfir.pojo.dto.RoomFrequencyChartDTO;
@@ -27,6 +29,7 @@ public class StatisticsController {
 
     @GetMapping("/admin")
     public Result getAdminStatistics() {
+        CurrentUserContext.requirePermission(RolePermissionRegistry.STATISTICS_READ);
         AdminStatisticsDTO statistics = statisticsService.getAdminStatistics();
         return Result.success(statistics);
     }
@@ -42,6 +45,7 @@ public class StatisticsController {
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) String location) {
 
+        CurrentUserContext.requirePermission(RolePermissionRegistry.STATISTICS_READ);
         FrequencyQueryDTO query = new FrequencyQueryDTO();
         query.setPeriod(period);
         query.setStartDate(startDate);
@@ -67,6 +71,7 @@ public class StatisticsController {
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) String location) {
 
+        CurrentUserContext.requirePermission(RolePermissionRegistry.STATISTICS_READ);
         FrequencyQueryDTO query = new FrequencyQueryDTO();
         query.setPeriod(period);
         query.setStartDate(startDate);
@@ -92,6 +97,7 @@ public class StatisticsController {
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) String location) {
 
+        CurrentUserContext.requirePermission(RolePermissionRegistry.STATISTICS_READ);
         FrequencyQueryDTO query = new FrequencyQueryDTO();
         query.setPeriod(period);
         query.setStartDate(startDate);
@@ -115,6 +121,7 @@ public class StatisticsController {
             @RequestParam(required = false) String startDate2,
             @RequestParam(required = false) String endDate2) {
 
+        CurrentUserContext.requirePermission(RolePermissionRegistry.STATISTICS_READ);
         FrequencyQueryDTO query1 = new FrequencyQueryDTO();
         query1.setPeriod(period1);
         query1.setStartDate(startDate1);
@@ -131,6 +138,7 @@ public class StatisticsController {
 
     @GetMapping("/room-frequency/weekly")
     public Result getWeeklyRoomFrequency() {
+        CurrentUserContext.requirePermission(RolePermissionRegistry.STATISTICS_READ);
         FrequencyQueryDTO query = new FrequencyQueryDTO();
         query.setPeriod("week");
         query.setSortBy("count_desc");

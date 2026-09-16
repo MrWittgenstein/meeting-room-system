@@ -2,6 +2,7 @@ package com.uestcfir.service.impl;
 
 
 
+import com.uestcfir.auth.RbacService;
 import com.uestcfir.config.EmailEncryptionService;
 import com.uestcfir.enumeration.user.UserStatus;
 import com.uestcfir.exception.BusinessException;
@@ -19,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.MailSendException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.time.LocalDateTime;
@@ -44,6 +46,8 @@ public class UserServiceImpl implements UserService {
     RedisTemplate redisTemplate;
     @Autowired
     PasswordEncoder passwordEncoder;
+    @Autowired
+    RbacService rbacService;
 
     @Autowired
     EmailEncryptionService emailEncryptionService;
@@ -96,6 +100,7 @@ public class UserServiceImpl implements UserService {
      * @return 操作结果
      * @throws BusinessException 如果注册失败
      */
+    @Transactional
     public Result register(UserDto user) throws Exception {
         log.info("Registering user: {}", user);
         //加密密码
@@ -113,7 +118,7 @@ public class UserServiceImpl implements UserService {
         //加密邮箱
         String encryptedEmail = encryptionService.encryptEmail(user.getEmail());
 
-        User finaluser=new User(1,user.getUsername(),user.getRealName(),password, encryptedEmail,emailHash, user.getPhone(), user.getUserType(),0,0, LocalDateTime.now(), LocalDateTime.now());
+        User finaluser=new User(null,user.getUsername(),user.getRealName(),password, encryptedEmail,emailHash, user.getPhone(), user.getUserType(),0,0, LocalDateTime.now(), LocalDateTime.now());
         String code=(String)redisTemplate.opsForValue().get(oriemail);
         if (code==null){
             return Result.fail("验证码已过期或不存在");
@@ -128,6 +133,8 @@ public class UserServiceImpl implements UserService {
         //    return Result.fail("Email already exists");
         //}
         if (userMapper.insertUser(finaluser)){
+            rbacService.replaceLegacyRole(finaluser.getUserId(), finaluser.getUserType());
+            redisTemplate.delete(oriemail);
             return Result.success();
         }
             return Result.fail("注册失败，请检查");
@@ -258,6 +265,5 @@ public class UserServiceImpl implements UserService {
 
 
 }
-
 
 

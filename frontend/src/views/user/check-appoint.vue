@@ -214,6 +214,7 @@ const tpinfo=()=>{
 }
 // 退出登录
 const handleExit = () => {
+  localStorage.removeItem('sessionId');
   localStorage.removeItem('token');
   router.push('/');
 }

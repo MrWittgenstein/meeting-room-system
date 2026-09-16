@@ -16,6 +16,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -67,6 +68,7 @@ public class ReservationImpl implements ReservationService {
      * @return 操作结果
      * @throws BusinessException 如果预定数据无效或添加失败
      */
+    @Transactional
     public Result addreservation(ReservationDto reservationDto, Integer userId) {
         log.info("Adding reservation: {}", reservationDto);
         String lockKey = ROOM_PREFIX + "lock:" + reservationDto.getRoomId();
@@ -309,4 +311,3 @@ public class ReservationImpl implements ReservationService {
 
 
 }
-

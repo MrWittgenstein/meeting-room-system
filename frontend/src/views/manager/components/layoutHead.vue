@@ -76,6 +76,8 @@ const handleLogout = () => {
   ).then(() => {
     // 清除登录状态
     localStorage.removeItem('meetingToken')
+    localStorage.removeItem('sessionId')
+    localStorage.removeItem('token')
     localStorage.removeItem('userInfo')
     // 跳转到登录页
     router.push('/')

@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.uestcfir.pojo.vo.MeetingroomQueryVo;
 import com.uestcfir.exception.BusinessException;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 会议室服务实现类
@@ -89,6 +90,7 @@ public class MeetroomImpl implements MeetroomService {
      * @return 操作结果
      * @throws BusinessException 如果会议室数据无效或创建失败
      */
+    @Transactional
     public Result createMeetroom(MeetingroomDto meetingroomDto, MultipartFile image) {
         try {
         validateMeetingroomDto(meetingroomDto);
@@ -181,6 +183,7 @@ public class MeetroomImpl implements MeetroomService {
      * @param roomId 会议室ID
      * @throws BusinessException 如果删除失败
      */
+    @Transactional
     public void deleteMeetroom(Integer roomId) {
         log.info("Deleting meetingroom with id " + roomId);
         reservationMapper.deleteReservationByRoomId(roomId);
