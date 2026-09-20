@@ -6,6 +6,7 @@ import com.uestcfir.pojo.entity.Result;
 import com.uestcfir.pojo.dto.IotDeviceCommandRequest;
 import com.uestcfir.pojo.vo.IotTelemetryVo;
 import com.uestcfir.pojo.vo.IotControlRoomVo;
+import com.uestcfir.pojo.vo.UnifiedRoomStateVo;
 import com.uestcfir.service.IotTelemetryService;
 import com.uestcfir.service.IotControlAuthorizationService;
 import com.uestcfir.mapper.IotDeviceMapper;
@@ -56,6 +57,12 @@ public class IotTelemetryController {
     public Result getRoomStatus(@PathVariable Integer roomId) {
         CurrentUserContext.requirePermission(RolePermissionRegistry.IOT_READ);
         return Result.success(IotTelemetryVo.fromRoomStatus(iotTelemetryService.getRoomStatus(roomId)));
+    }
+
+    @GetMapping("/rooms/{roomId}/state")
+    public Result getUnifiedRoomState(@PathVariable Integer roomId) {
+        CurrentUserContext.requirePermission(RolePermissionRegistry.IOT_READ);
+        return Result.success(UnifiedRoomStateVo.fromRoomStatus(iotTelemetryService.getRoomStatus(roomId)));
     }
 
     @GetMapping("/rooms/{roomId}/history")

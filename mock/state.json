@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-09-20T10:30:00+08:00",
+  "room_id": "meeting_room_14",
+  "room_db_id": 14,
+  "device_id": "raspi-01",
+  "occupancy": true,
+  "people_count": 3,
+  "temperature": 24.6,
+  "humidity": 48.0,
+  "door_status": "closed",
+  "devices": {
+    "light_on": true,
+    "projector_on": false,
+    "cooling": false,
+    "heating": false,
+    "humidifier": false,
+    "dehumidifier": false,
+    "curtain_open": false,
+    "buzzer_on": false,
+    "auto_mode": true,
+    "alarm": false
+  },
+  "sensor_status": "ok",
+  "source": "mock",
+  "quality": "normal",
+  "quality_issues": []
+}
