@@ -1,0 +1,38 @@
+Timestamp,Room Code,Room DB ID,Device ID,Event Type,Temperature,Humidity,Light Raw,Smoke Raw,Presence,People Count,Door State,Sensor Status
+2026/09/15 09:00,meeting_room_14,14,raspi-01,telemetry,24.8,53.0,145,12,true,3,closed,ok
+2026-09-15 09:05:00,meeting_room_14,14,raspi-01,telemetry,25.0,52.5,151,14,1,4,closed,ok
+2026-09-15T09:10:00+08:00,meeting_room_14,14,raspi-01,telemetry,25.2,52.0,158,13,yes,4,open,ok
+2026-09-15T09:10:00+08:00,meeting_room_14,14,raspi-01,telemetry,25.2,52.0,158,13,yes,4,open,ok
+2026-09-15 09:15:00,ROOM-14,14,RASPI-01,TELEMETRY,85,51.5,163,15,true,5,OPEN,warning
+2026-09-15 09:20:00,14,14,raspi-01,telemetry,,55.0,169,18,occupied,5,opened,ok
+2026-09-15 09:25:00,Meeting Room 14,14,raspi-01,telemetry,25.6,,172,19,1,6,closed,ok
+2026-09-15 09:30:00,room_14,14,raspi-01,telemetry,25.9,54.0,180,17,unknown,6,closed,ok
+2026-09-15 09:35:00,meeting-room-14,14,raspi-01,telemetry,26.1,53.5,186,20,true,6,close,ok
+2026-09-15 09:40:00,meeting_room_14,14,raspi-01,telemetry,26.3,130,192,21,true,7,closed,warning
+2026-09-15 09:45:00,meeting_room_14,14,raspi-01,telemetry,26.5,52.0,300,23,true,7,closed,warning
+2026-09-15 09:50:00,meeting_room_14,14,raspi-01,telemetry,26.7,51.5,205,650,true,8,closed,warning
+2026-09-15 09:55:00,meeting_room_14,14,raspi-01,telemetry,26.9,51.0,210,950,true,8,closed,warning
+2026-09-15 10:00:00,meeting_room_14,14,raspi-01,telemetry,-5,50.5,215,25,true,8,closed,error
+2026-09-15 10:05:00,meeting_room_14,14,raspi-01,telemetry,27.0,50.0,220,24,true,-1,closed,warning
+2026-09-15 10:10:00,meeting_room_14,15,raspi-01,telemetry,27.1,49.5,224,22,true,8,closed,ok
+2026/09/15 09:00,meeting_room_15,15,raspi-02,telemetry,23.5,48.0,110,8,false,0,closed,ok
+2026-09-15 09:05:00,room-15,15,raspi-02,telemetry,23.7,47.5,114,9,0,0,closed,ok
+2026-09-15 09:10:00,15,15,raspi-02,telemetry,23.9,47.0,118,10,no,0,closed,ok
+2026-09-15T09:15:00+08:00,Meeting Room 15,15,raspi-02,telemetry,24.1,46.5,122,11,vacant,0,closed,ok
+2026-09-15 09:20:00,room_15,15,raspi-02,telemetry,24.3,46.0,126,12,false,0,closed,ok
+2026-09-15 09:25:00,meeting_room_15,15,raspi-02,telemetry,24.5,-8,130,13,true,1,open,warning
+2026-09-15 09:30:00,meeting_room_15,15,raspi-02,telemetry,51,45.0,134,14,true,2,open,warning
+2026-09-15 09:35:00,meeting_room_15,15,raspi-02,telemetry,24.9,44.5,138,15,false,0,closed,ok
+2026-09-15 09:40:00,meeting_room_15,15,raspi-02,telemetry,25.1,44.0,142,16,,0,closed,ok
+2026/09/15 09:20,meeting_room_15,15,raspi-02,telemetry,24.3,46.0,126,12,false,0,closed,ok
+2026/09/15 09:00,meeting_room_32,32,raspi-03,telemetry,22.8,57.0,98,7,true,2,open,ok
+2026-09-15 09:05:00,room-32,32,raspi-03,telemetry,23.0,56.5,102,8,1,3,open,ok
+2026-09-15 09:10:00,32,32,raspi-03,telemetry,23.2,56.0,106,9,yes,3,closed,ok
+2026-09-15T09:15:00+08:00,Meeting Room 32,32,raspi-03,telemetry,23.4,55.5,110,10,true,4,closed,ok
+2026-09-15 09:20:00,room_32,32,raspi-03,telemetry,23.6,55.0,114,11,true,4,closed,ok
+,meeting_room_32,32,raspi-03,telemetry,23.8,54.5,118,12,true,4,closed,ok
+2026-09-15 09:30:00,unknown-room,32,raspi-03,telemetry,24.0,54.0,122,13,true,5,closed,ok
+2026-09-15 09:35:00,meeting_room_32,32,raspi-03,telemetry,24.2,,126,14,true,5,closed,ok
+2026-09-15 09:40:00,meeting_room_32,32,raspi-03,telemetry,24.4,53.0,130,15,true,5,ajar,warning
+2026-09-15 09:45:00,meeting_room_32,32,raspi-03,telemetry,24.6,52.5,134,16,true,6,closed,offline
+2026-09-15 09:50:00,meeting_room_32,32,raspi-03,telemetry,24.8,52.0,138,17,true,6,closed,ok
