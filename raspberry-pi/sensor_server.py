@@ -25,6 +25,7 @@ from typing import Any
 
 try:
     import websockets
+    from websockets.legacy.client import connect as backend_connect
 except ImportError as exc:  # pragma: no cover - handled at runtime on Pi
     raise SystemExit(
         "Missing dependency: websockets. Run `. .venv/bin/activate` and then "
@@ -910,6 +911,8 @@ class SmartRoomSensorServer:
 
     def set_servo_angle(self, angle: float) -> bool:
         if self.servo_pwm is None:
+            if not self.demo_mode:
+                return False
             self.device_state["servo_angle"] = round(angle)
             self.device_state["door_state"] = (
                 "open"
@@ -1117,10 +1120,14 @@ class SmartRoomSensorServer:
             return
 
         websocket_url = str(os.getenv("BACKEND_WS_URL") or self.config["backend"]["websocket_url"])
+        device_token = str(os.getenv("IOT_DEVICE_TOKEN") or self.config["backend"].get("device_token", ""))
+        device_id = str(self.config["device"]["device_id"])
         reconnect_delay = float(self.config["backend"]["reconnect_delay_seconds"])
         while self.running:
             try:
-                async with websockets.connect(websocket_url, ping_interval=20) as websocket:
+                async with backend_connect(websocket_url, ping_interval=20, open_timeout=10,
+                                           extra_headers={"X-Device-Id": device_id,
+                                                          "X-Device-Token": device_token}) as websocket:
                     greeting = await websocket.recv()
                     logging.info("Spring backend connected: %s", greeting)
                     sender_task = asyncio.create_task(self.backend_sender_loop(websocket))
@@ -1195,6 +1202,7 @@ class SmartRoomSensorServer:
         return {
             "type": "COMMAND_ACK",
             "commandId": command_id,
+            "trace_id": command_message.get("trace_id"),
             "deviceId": self.config["device"]["device_id"],
             "command": command,
             "status": status,
@@ -1208,6 +1216,18 @@ class SmartRoomSensorServer:
         target = command_message.get("target")
         value = command_message.get("value")
         params = command_message.get("params") or {}
+        if command == "set_climate_mode":
+            mode = str(params.get("mode", "cool"))
+            targets = {"cool": "cooling", "heat": "heating", "dry": "dehumidifier"}
+            if mode not in targets:
+                raise ValueError("unsupported climate mode")
+            enabled = self.normalize_bool(value)
+            selected = targets[mode]
+            for output in targets.values():
+                if self.device_state.get(output) and (output != selected or not enabled):
+                    if not self.set_device_state(output, False):
+                        return False
+            return self.set_device_state(selected, True) if enabled else True
         if command in {"set_device_state", "set_state"}:
             if target is None:
                 raise ValueError("target is required")
@@ -1247,13 +1267,18 @@ class SmartRoomSensorServer:
             raise ValueError(f"unsupported target: {target}")
 
         state_key, output_name = aliases[normalized]
+        if state_key == "alarm":
+            output_name = "buzzer"
+        written = self.write_output(output_name, enabled) if output_name else True
+        if not written and not self.demo_mode:
+            return False
         self.device_state[state_key] = enabled
         if state_key == "alarm":
             self.device_state["buzzer_on"] = enabled
             output_name = "buzzer"
         if state_key != "auto_mode":
             self.device_state["auto_mode"] = False
-        return self.write_output(output_name, enabled) if output_name else True
+        return written
 
     async def handle_client(self, websocket: Any, path: str | None = None) -> None:
         self.clients.add(websocket)
@@ -1276,19 +1301,9 @@ class SmartRoomSensorServer:
 
         if data.get("type") == "ping":
             await websocket.send(json.dumps({"type": "pong", "timestamp": time.time()}))
-        elif data.get("type") == "set_servo_angle" and self.config["servo"]["enabled"]:
-            angle = float(data.get("angle", self.config["servo"]["closed_angle"]))
-            ok = self.set_servo_angle(angle)
-            await websocket.send(json.dumps({"type": "set_servo_angle", "ok": ok}))
-        elif data.get("type") in {"COMMAND", "set_device_state", "set_state", "set_auto_mode"}:
-            command_data = data if data.get("type") == "COMMAND" else {
-                "command": data.get("type"),
-                "target": data.get("target"),
-                "value": data.get("value"),
-                "params": data.get("params", {}),
-            }
-            ack = await self.execute_backend_command(command_data)
-            await websocket.send(json.dumps(ack, ensure_ascii=False))
+        elif data.get("type") in {"set_servo_angle", "COMMAND", "set_device_state", "set_state", "set_auto_mode"}:
+            await websocket.send(json.dumps({"type": "COMMAND_ACK", "status": "error",
+                                             "message": "Control requires the authenticated backend"}))
 
     def handle_alerts(self, data: dict[str, Any]) -> None:
         if "smoke" not in data:

@@ -9,8 +9,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>meetingroom-main</module>
+        <module>backend</module>
         <module>topbiz-gateway</module>
+        <module>log-service</module>
     </modules>
 
     <properties>

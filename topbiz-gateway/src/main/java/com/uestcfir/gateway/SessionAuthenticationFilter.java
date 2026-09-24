@@ -42,18 +42,30 @@ public class SessionAuthenticationFilter implements GlobalFilter, Ordered {
             return unauthorized(exchange, "Missing or expired session");
         }
         return redisTemplate.opsForValue().get(SESSION_KEY_PREFIX + sessionId)
-                .flatMap(json -> forwardIdentity(exchange, chain, sessionId, json))
-                .switchIfEmpty(unauthorized(exchange, "Session not found or expired"));
+                .defaultIfEmpty("")
+                .flatMap(json -> json.isEmpty() ? unauthorized(exchange, "Session not found or expired")
+                        : forwardIdentity(exchange, chain, sessionId, json));
     }
 
     private Mono<Void> forwardIdentity(ServerWebExchange exchange, GatewayFilterChain chain,
                                        String sessionId, String json) {
         try {
             JsonNode session = objectMapper.readTree(json);
+            if (!session.path("userId").canConvertToInt() || session.path("userId").asInt() <= 0
+                    || !session.path("permissions").isArray()) {
+                return unauthorized(exchange, "Invalid session data");
+            }
+            exchange.getAttributes().put("authenticatedUserId", session.path("userId").asText());
             String permissions = objectMapper.writeValueAsString(session.path("permissions"));
             ServerWebExchange authenticatedExchange = exchange.mutate()
                     .request(exchange.getRequest().mutate()
                             .headers(headers -> {
+                                // Never trust identity headers supplied by the browser.
+                                headers.remove("X-Authenticated-User-Id");
+                                headers.remove("X-Authenticated-Role");
+                                headers.remove("X-Authenticated-Permissions");
+                                headers.remove("X-User-Id");
+                                headers.remove("User-Id");
                                 headers.set("SessionId", sessionId);
                                 headers.set("X-Authenticated-User-Id", session.path("userId").asText());
                                 headers.set("X-Authenticated-Role", session.path("role").asText());
@@ -85,7 +97,7 @@ public class SessionAuthenticationFilter implements GlobalFilter, Ordered {
         }
         return PUBLIC_PATH_PREFIXES.stream()
                 .filter(prefix -> !"/".equals(prefix))
-                .anyMatch(path::startsWith);
+                .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
@@ -98,6 +110,6 @@ public class SessionAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE;
+        return Ordered.HIGHEST_PRECEDENCE + 10;
     }
 }

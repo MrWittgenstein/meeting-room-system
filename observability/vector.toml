@@ -1,0 +1,34 @@
+# Run from the platform root. Keep data_dir and disk buffers across restarts.
+data_dir = "run-logs/vector-data"
+[sources.access]
+type = "file"
+include = ["run-logs/access/*.jsonl", "*/run-logs/access/*.jsonl"]
+read_from = "beginning"
+fingerprint.strategy = "checksum"
+
+[transforms.parse]
+type = "remap"
+inputs = ["access"]
+drop_on_error = true
+source = '''
+. = parse_json!(.message)
+.timestamp = format_timestamp!(parse_timestamp!(.timestamp, format: "%+"), format: "%F %T%.3f")
+'''
+
+[sinks.clickhouse]
+type = "clickhouse"
+inputs = ["parse"]
+endpoint = "${CLICKHOUSE_URL:-http://127.0.0.1:8123}"
+database = "meetingroom_logs"
+table = "access_events"
+skip_unknown_fields = true
+compression = "gzip"
+auth.strategy = "basic"
+auth.user = "${CLICKHOUSE_USER:-default}"
+auth.password = "${CLICKHOUSE_PASSWORD:-}"
+batch.max_events = 1000
+batch.timeout_secs = 5
+buffer.type = "disk"
+buffer.max_size = 268435488
+buffer.when_full = "block"
+acknowledgements.enabled = true

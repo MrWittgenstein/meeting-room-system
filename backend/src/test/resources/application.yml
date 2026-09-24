@@ -15,7 +15,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/meetingroom?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: meetingroom
-    password: ${DB_PASSWORD:}
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
@@ -38,6 +38,6 @@ aliyun:
   oss:
     endpoint: oss-cn-chengdu.aliyuncs.com
     access-key-id: test
-    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    access-key-secret: test
     bucket-name: test
     base-url: https://example.invalid

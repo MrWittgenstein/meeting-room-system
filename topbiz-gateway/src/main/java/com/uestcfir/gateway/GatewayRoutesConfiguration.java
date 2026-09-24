@@ -26,6 +26,7 @@ public class GatewayRoutesConfiguration {
         cors.addAllowedHeader(CorsConfiguration.ALL);
         cors.addAllowedMethod(CorsConfiguration.ALL);
         cors.addExposedHeader(HttpHeaders.SET_COOKIE);
+        cors.addExposedHeader("X-Trace-Id");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cors);
@@ -35,8 +36,12 @@ public class GatewayRoutesConfiguration {
     @Bean
     public RouteLocator meetingroomRoute(
             RouteLocatorBuilder builder,
-            @Value("${MEETINGROOM_SERVICE_URL:http://127.0.0.1:8081}") String meetingroomUrl) {
+            @Value("${MEETINGROOM_SERVICE_URL:http://127.0.0.1:8081}") String meetingroomUrl,
+            @Value("${MEETINGROOM_WS_URL:ws://127.0.0.1:8081}") String meetingroomWsUrl,
+            @Value("${LOG_SERVICE_URL:http://127.0.0.1:8083}") String logUrl) {
         return builder.routes()
+                .route("log-service", route -> route.path("/api/v1/logs/**").uri(logUrl))
+                .route("meetingroom-device-websocket", route -> route.path("/iot/ws/device").uri(meetingroomWsUrl))
                 .route("meetingroom-service", route -> route.path("/**").uri(meetingroomUrl))
                 .build();
     }

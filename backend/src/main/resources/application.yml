@@ -3,6 +3,7 @@ app:
     key: 123456
 
 server:
+  address: ${MEETINGROOM_BIND_ADDRESS:127.0.0.1}
   port: ${MEETINGROOM_PORT:8081}
 
 auth:
@@ -10,6 +11,8 @@ auth:
     ttl: ${AUTH_SESSION_TTL:12h}
 
 spring:
+  application:
+    name: meetingroom-main
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -81,5 +84,15 @@ mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.uestcfir.pojo.entity
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
     map-underscore-to-camel-case: true
+
+iot:
+  device-auth:
+    tokens:
+      raspi-01: ${IOT_DEVICE_TOKEN:}
+
+business-cache:
+  enabled: ${BUSINESS_CACHE_ENABLED:true}
+  room-list-ttl: ${ROOM_LIST_CACHE_TTL:5m}
+  telemetry-ttl: ${TELEMETRY_CACHE_TTL:5s}

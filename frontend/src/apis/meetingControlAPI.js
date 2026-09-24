@@ -39,3 +39,8 @@ export const getDeviceControlAccessAPI = (deviceId) => httpInstance({
   url: `/iot/devices/${encodeURIComponent(deviceId)}/control-access`,
   method: 'get'
 })
+
+export const getDeviceLatestAPI = (deviceId) => httpInstance({
+  url: `/iot/devices/${encodeURIComponent(deviceId)}/latest`,
+  method: 'get'
+})

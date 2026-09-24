@@ -14,6 +14,16 @@ spring:
       server:
         webflux:
           enabled: true
+          httpclient:
+            connect-timeout: 2000
+            response-timeout: 8s
+
+gateway:
+  rate-limit:
+    login-rps: ${GATEWAY_LOGIN_RPS:5}
+    query-rps: ${GATEWAY_QUERY_RPS:20}
+    control-rps: ${GATEWAY_CONTROL_RPS:5}
+    burst: ${GATEWAY_BURST:5}
 
 management:
   endpoints:

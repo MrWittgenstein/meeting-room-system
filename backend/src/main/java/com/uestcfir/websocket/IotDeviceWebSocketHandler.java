@@ -12,6 +12,8 @@ import com.uestcfir.pojo.vo.IotDeviceCommandResultVo;
 import com.uestcfir.pojo.vo.IotRealtimeMessageVo;
 import com.uestcfir.pojo.vo.IotTelemetryVo;
 import com.uestcfir.service.IotTelemetryService;
+import com.uestcfir.logging.CommandAudit;
+import com.uestcfir.logging.TraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -56,12 +58,22 @@ public class IotDeviceWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @org.springframework.beans.factory.annotation.Value("${iot.command-ack-timeout-ms:3000}")
+    private long ackTimeoutMillis = 3000;
+
     private final Map<String, WebSocketSession> deviceSessions = new ConcurrentHashMap<>();
     private final Map<String, String> sessionDeviceIds = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Map<String, Object>>> pendingCommands = new ConcurrentHashMap<>();
+    private final Map<String, String> commandSessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        Object deviceId = session.getAttributes().get("deviceId");
+        if (!(deviceId instanceof String id) || id.isBlank()) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
+        bindDeviceSession((String) deviceId, session);
         log.info("IoT device websocket connected. sessionId={}, remote={}", session.getId(), session.getRemoteAddress());
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(buildResponse("CONNECTED", "success", "iot websocket connected", null))));
     }
@@ -70,10 +82,13 @@ public class IotDeviceWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         try {
-            if (handleDeviceAck(payload)) {
+            if (handleDeviceAck(session, payload)) {
                 return;
             }
             IotTelemetryRequest request = parsePayload(payload);
+            if (!java.util.Objects.equals(session.getAttributes().get("deviceId"), request.getDeviceId())) {
+                throw new BusinessException(403, "Telemetry device identity mismatch");
+            }
             IotSensorRecord record = iotTelemetryService.saveTelemetry(request, payload);
             bindDeviceSession(record.getDeviceId(), session);
             publishTelemetry(record);
@@ -108,13 +123,16 @@ public class IotDeviceWebSocketHandler extends TextWebSocketHandler {
 
         WebSocketSession session = deviceSessions.get(deviceId.trim());
         if (session == null || !session.isOpen()) {
-            throw new BusinessException("IoT device is offline, deviceId=" + deviceId);
+            CommandAudit.put("outcome", "device_offline");
+            throw new BusinessException(503, "IoT device is offline");
         }
 
         String commandId = UUID.randomUUID().toString();
+        CommandAudit.put("commandId", commandId);
         Map<String, Object> commandPayload = new LinkedHashMap<>();
         commandPayload.put("type", "COMMAND");
         commandPayload.put("commandId", commandId);
+        commandPayload.put("trace_id", TraceContext.get());
         commandPayload.put("deviceId", deviceId.trim());
         commandPayload.put("command", request.getCommand().trim());
         commandPayload.put("target", request.getTarget());
@@ -125,22 +143,52 @@ public class IotDeviceWebSocketHandler extends TextWebSocketHandler {
 
         CompletableFuture<Map<String, Object>> ackFuture = new CompletableFuture<>();
         pendingCommands.put(commandId, ackFuture);
+        commandSessions.put(commandId, session.getId());
         try {
             synchronized (session) {
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(commandPayload)));
             }
-            Map<String, Object> ack = ackFuture.get(3, TimeUnit.SECONDS);
+            CommandAudit.put("outcome", "dispatched");
+            Map<String, Object> dispatched = new LinkedHashMap<>();
+            dispatched.put("event_id", UUID.randomUUID().toString());
+            dispatched.put("timestamp", Instant.now().toString());
+            dispatched.put("microservice", "meetingroom-main");
+            dispatched.put("api_endpoint", "/iot/devices/" + deviceId.trim() + "/commands");
+            dispatched.put("http_method", "POST");
+            dispatched.put("status_code", 202);
+            dispatched.put("business_code", 1);
+            dispatched.put("latency_ms", 0);
+            dispatched.put("trace_id", TraceContext.get() == null ? "" : TraceContext.get());
+            var user = com.uestcfir.auth.CurrentUserContext.get();
+            dispatched.put("user_id", user == null ? "" : String.valueOf(user.getUserId()));
+            dispatched.put("device_id", deviceId.trim());
+            dispatched.put("command_id", commandId);
+            dispatched.put("outcome", "dispatched");
+            org.slf4j.LoggerFactory.getLogger("ACCESS_LOG").info(objectMapper.writeValueAsString(dispatched));
+            Map<String, Object> ack = ackFuture.get(ackTimeoutMillis, TimeUnit.MILLISECONDS);
             String status = String.valueOf(ack.getOrDefault("status", "unknown"));
             String message = String.valueOf(ack.getOrDefault("message", "command acknowledged"));
+            if (!"success".equalsIgnoreCase(status)) {
+                CommandAudit.put("outcome", "execution_failed");
+                throw new BusinessException(502, "Device rejected command or did not execute it");
+            }
+            CommandAudit.put("outcome", "executed");
             return new IotDeviceCommandResultVo(commandId, deviceId.trim(), status, message, ack);
         } catch (TimeoutException e) {
-            throw new BusinessException("IoT device did not acknowledge command in time, deviceId=" + deviceId);
+            CommandAudit.put("outcome", "ack_timeout");
+            throw new BusinessException(504, "IoT device did not acknowledge command in time");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            CommandAudit.put("outcome", "interrupted");
+            throw new BusinessException(503, "Command wait interrupted");
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            throw new BusinessException("Failed to send IoT command: " + e.getMessage());
+            CommandAudit.put("outcome", "dispatch_failed");
+            throw new BusinessException(502, "Failed to send IoT command");
         } finally {
             pendingCommands.remove(commandId);
+            commandSessions.remove(commandId);
         }
     }
 
@@ -158,7 +206,7 @@ public class IotDeviceWebSocketHandler extends TextWebSocketHandler {
         messagingTemplate.convertAndSend("/topic/iot/devices/" + record.getDeviceId(), message);
     }
 
-    private boolean handleDeviceAck(String payload) throws JsonProcessingException {
+    private boolean handleDeviceAck(WebSocketSession session, String payload) throws JsonProcessingException {
         JsonNode root = objectMapper.readTree(payload);
         String type = readText(new String[]{"type"}, root);
         if (!"COMMAND_ACK".equalsIgnoreCase(type)) {
@@ -171,7 +219,9 @@ public class IotDeviceWebSocketHandler extends TextWebSocketHandler {
         }
 
         CompletableFuture<Map<String, Object>> future = pendingCommands.get(commandId);
-        if (future != null) {
+        String acknowledgedDevice = readText(new String[]{"deviceId", "device_id"}, root);
+        if (future != null && session.getId().equals(commandSessions.get(commandId))
+                && java.util.Objects.equals(acknowledgedDevice, session.getAttributes().get("deviceId"))) {
             Map<String, Object> ack = objectMapper.convertValue(root, new TypeReference<>() {
             });
             future.complete(ack);

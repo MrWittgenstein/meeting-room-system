@@ -19,7 +19,7 @@ public final class CurrentUserContext {
     public static SessionUser requireUser() {
         SessionUser user = CURRENT.get();
         if (user == null) {
-            throw new BusinessException("未登录或会话已过期");
+            throw new BusinessException(401, "未登录或会话已过期");
         }
         return user;
     }
@@ -31,7 +31,8 @@ public final class CurrentUserContext {
     public static void requirePermission(String permission) {
         SessionUser user = requireUser();
         if (user.getPermissions() == null || !user.getPermissions().contains(permission)) {
-            throw new BusinessException("无权限执行该操作");
+            com.uestcfir.logging.CommandAudit.put("outcome", "permission_denied");
+            throw new BusinessException(403, "无权限执行该操作");
         }
     }
 

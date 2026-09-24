@@ -31,6 +31,8 @@ public class OssFileStorageService implements FileStorageService {
 
     @Autowired
     private MeetingroomMapper meetingroomMapper;
+    @Autowired
+    private com.uestcfir.service.BusinessCacheInvalidator cacheInvalidator;
 
     @Autowired
     private ImportantNewsService importantNewsService;
@@ -141,6 +143,7 @@ public class OssFileStorageService implements FileStorageService {
             }
 
             log.info("会议室图片上传完成: roomId={}, 原图={}, 缩略图={}", roomId, originalFileUrl, thumbnailFileUrl);
+            cacheInvalidator.roomsChanged();
 
             return new ImageUploadResult(
                     originalFilePath,      // OSS对象路径

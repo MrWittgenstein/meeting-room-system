@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import com.uestcfir.mapper.MeetingroomMapper;
+import com.uestcfir.logging.CommandAudit;
 
 /**
  * Resource and time scoped authorization for IoT device commands.
@@ -22,29 +26,39 @@ import java.time.LocalTime;
 public class IotControlAuthorizationService {
     private final IotDeviceMapper iotDeviceMapper;
     private final ReservationMapper reservationMapper;
+    private final MeetingroomMapper meetingroomMapper;
+    private final Clock clock;
 
     public IotDevice requireCanControl(String deviceId) {
+        CommandAudit.put("deviceId", deviceId);
+        CommandAudit.put("outcome", "permission_denied");
+        SessionUser current = CurrentUserContext.requireUser();
         if (deviceId == null || deviceId.isBlank()) {
             throw new BusinessException("deviceId can not be empty");
         }
 
         IotDevice device = iotDeviceMapper.findByDeviceId(deviceId.trim());
         if (device == null) {
-            throw new BusinessException("IoT device does not exist, deviceId=" + deviceId);
+            throw new BusinessException(403, "IoT device is not registered");
         }
-
-        SessionUser current = CurrentUserContext.requireUser();
+        Integer roomId = device.getRoomId();
+        CommandAudit.put("roomId", roomId);
+        if (roomId == null || meetingroomMapper.getMeetingroomById(roomId) == null) {
+            throw new BusinessException(403, "IoT device has no valid room binding");
+        }
         if (isGlobalController(current)) {
+            CommandAudit.put("outcome", "authorized");
             return device;
         }
 
-        Integer roomId = device.getRoomId();
+        LocalDateTime now = LocalDateTime.now(clock);
         boolean activeReservation = roomId != null
                 && reservationMapper.existsActiveReservation(
-                current.getUserId(), roomId, LocalDate.now(), LocalTime.now());
+                current.getUserId(), roomId, now.toLocalDate(), now.toLocalTime());
         if (!activeReservation) {
-            throw new BusinessException("当前没有该会议室的有效预约，无法控制设备");
+            throw new BusinessException(403, "当前没有该会议室的有效预约，无法控制设备");
         }
+        CommandAudit.put("outcome", "authorized");
         return device;
     }
 

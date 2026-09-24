@@ -7,6 +7,7 @@ import com.uestcfir.mapper.IotDeviceMapper;
 import com.uestcfir.mapper.ReservationMapper;
 import com.uestcfir.pojo.entity.IotDevice;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +32,20 @@ class IotControlAuthorizationServiceTest {
 
     @Mock
     private ReservationMapper reservationMapper;
+
+    @Mock
+    private com.uestcfir.mapper.MeetingroomMapper meetingroomMapper;
+
+    @Mock
+    private java.time.Clock clock;
+
+    @BeforeEach
+    void bindingAndTime() {
+        org.mockito.Mockito.lenient().when(meetingroomMapper.getMeetingroomById(any()))
+                .thenReturn(new com.uestcfir.pojo.entity.Meetingroom());
+        org.mockito.Mockito.lenient().when(clock.getZone()).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-09-23T02:00:00Z"));
+    }
 
     @InjectMocks
     private IotControlAuthorizationService service;
