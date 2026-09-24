@@ -54,10 +54,26 @@ class UnifiedRoomStateVoTest {
         assertEquals("abnormal", state.getQuality());
         assertTrue(state.getQualityIssues().contains("missing_occupancy"));
         assertTrue(state.getQualityIssues().contains("temperature_out_of_range"));
+        assertFalse(state.getQualityIssues().contains("missing_temperature"));
         assertTrue(state.getQualityIssues().contains("missing_humidity"));
         assertTrue(state.getQualityIssues().contains("invalid_door_status"));
         assertTrue(state.getQualityIssues().contains("sensor_status_error"));
         assertTrue(state.getQualityIssues().contains("device_error"));
+    }
+
+    @Test
+    void doesNotReportMissingTemperatureAsOutOfRange() {
+        IotRoomStatus roomStatus = baseRoomStatus();
+        roomStatus.setPresence(true);
+        roomStatus.setTemperature(null);
+        roomStatus.setHumidity(new BigDecimal("48.0"));
+        roomStatus.setDoorState("closed");
+        roomStatus.setSensorStatus("ok");
+
+        UnifiedRoomStateVo state = UnifiedRoomStateVo.fromRoomStatus(roomStatus);
+
+        assertTrue(state.getQualityIssues().contains("missing_temperature"));
+        assertFalse(state.getQualityIssues().contains("temperature_out_of_range"));
     }
 
     private IotRoomStatus baseRoomStatus() {

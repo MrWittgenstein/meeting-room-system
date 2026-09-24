@@ -126,6 +126,7 @@ curl.exe -i http://127.0.0.1:8000/iot/rooms/99/state
 - 缺失值保留为 `null`，同时令 `quality=abnormal`。
 - 具体原因写入 `quality_issues`，例如 `missing_humidity`。
 - 越界温度、湿度和非法门状态同样标记为异常。
+- 质量原因互不混淆：空温度记录 `missing_temperature`，非空温度越界记录 `temperature_out_of_range`，两者不会同时出现。
 - 消费端不得把 `null` 自动解释为 0、无人或设备关闭。
 
 ## 测试命令

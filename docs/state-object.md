@@ -57,6 +57,8 @@
 | `quality` | 枚举 | 是 | 根据完整性和范围检查生成 | `normal` 或 `abnormal` | 决定是否展示告警样式 |
 | `quality_issues` | 字符串数组 | 是 | 质量检查生成 | 无问题时为空数组 | 调试、日志和异常提示 |
 
+CSV 清洗结果沿用同一类型约定：`occupancy` 使用小写 `true`、`false`，未知值留空。JSON 接口中的该字段仍是原生布尔值或 `null`，消费端不得把字符串 `"0"`、数字 `0` 或空值自行解释为布尔值。
+
 ## devices 字段
 
 | 字段 | 类型 | 含义 |
@@ -90,6 +92,7 @@
 - 温度不在 0 至 50、湿度不在 0 至 100、门状态不在规定枚举中时，`quality` 为 `abnormal`。
 - `sensor_status` 不是 `ok`，或者设备上报了错误信息时，`quality` 为 `abnormal`。
 - 具体问题必须写入 `quality_issues`，不能只给出一个无法解释的异常标志。
+- 缺失、格式非法和数值越界是不同原因。空温度只记录 `missing_temperature`；非空温度超出范围只记录 `temperature_out_of_range`，不能同时标记为缺失。
 
 ## 各模块使用约定
 

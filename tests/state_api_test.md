@@ -104,9 +104,19 @@ mvn -f backend\pom.xml -Dtest=UnifiedRoomStateVoTest test
 执行结果：
 
 ```text
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
+
+## 数据生成与清洗一致性测试
+
+执行命令：
+
+```powershell
+python -m unittest -v tests\test_clean_data.py
+```
+
+该测试检查一周数据的时间覆盖、清洗后 `occupancy` 的布尔表示，以及空温度不会被误报为越界温度。
 
 ## 结论
 

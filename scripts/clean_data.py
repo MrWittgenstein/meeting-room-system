@@ -107,9 +107,9 @@ def normalize_binary(value: Any) -> Any:
     truthy = {"1", "1.0", "true", "yes", "y", "occupied", "present", "on"}
     falsy = {"0", "0.0", "false", "no", "n", "empty", "vacant", "off"}
     if normalized in truthy:
-        return 1
+        return True
     if normalized in falsy:
-        return 0
+        return False
     return pd.NA
 
 
@@ -120,17 +120,20 @@ def normalize_door_state(value: Any) -> Any:
     aliases = {
         "open": "open",
         "opened": "open",
+        "opening": "opening",
         "close": "closed",
         "closed": "closed",
+        "closing": "closing",
     }
     return aliases.get(normalized, pd.NA)
 
 
 def normalize_sensor_status(value: Any) -> Any:
     normalized = normalize_text(value)
-    if normalized in {"ok", "warning", "error"}:
-        return normalized
-    return pd.NA
+    if pd.isna(normalized):
+        return pd.NA
+    normalized = re.sub(r"[^a-z0-9]+", "_", normalized).strip("_")
+    return normalized or pd.NA
 
 
 def relative_display(path: Path) -> str:
@@ -158,6 +161,7 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
 
     df = raw[EXPECTED_COLUMNS].copy()
     missing_before = df.isna().sum().to_dict()
+    source_missing = {column: df[column].isna() for column in EXPECTED_COLUMNS}
     issues = pd.Series([[] for _ in range(len(df))], index=df.index, dtype=object)
     anomaly_counts: Counter[str] = Counter()
 
@@ -194,6 +198,7 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
     df["room_db_id"] = derived_room_db_id
 
     df["device_id"] = df["device_id"].map(normalize_text)
+    add_issue(source_missing["device_id"], "missing_device_id")
     df["event_type"] = df["event_type"].map(normalize_text)
     missing_event_type = df["event_type"].isna()
     add_issue(missing_event_type, "missing_event_type_filled")
@@ -230,19 +235,18 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
     df.loc[people_outlier, "people_count"] = pd.NA
 
     original_occupancy = df["occupancy"].copy()
-    df["occupancy"] = df["occupancy"].map(normalize_binary).astype("Int64")
+    df["occupancy"] = df["occupancy"].map(normalize_binary).astype("boolean")
     add_issue(original_occupancy.notna() & df["occupancy"].isna(), "invalid_occupancy")
 
     original_door_state = df["door_state"].copy()
     df["door_state"] = df["door_state"].map(normalize_door_state)
     add_issue(original_door_state.notna() & df["door_state"].isna(), "invalid_door_state")
 
-    original_sensor_status = df["sensor_status"].copy()
     df["sensor_status"] = df["sensor_status"].map(normalize_sensor_status)
-    add_issue(
-        original_sensor_status.notna() & df["sensor_status"].isna(),
-        "invalid_sensor_status",
-    )
+    missing_sensor_status = df["sensor_status"].isna()
+    df.loc[missing_sensor_status, "sensor_status"] = "unknown"
+    for status in sorted(df.loc[df["sensor_status"] != "ok", "sensor_status"].unique()):
+        add_issue(df["sensor_status"].eq(status), f"sensor_status_{status}")
 
     for column in [
         "temperature",
@@ -250,9 +254,8 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
         "occupancy",
         "people_count",
         "door_state",
-        "sensor_status",
     ]:
-        add_issue(df[column].isna(), f"missing_{column}")
+        add_issue(source_missing[column], f"missing_{column}")
 
     mandatory_invalid = df["timestamp"].isna() | df["room_id"].isna()
     dropped_mandatory_count = int(mandatory_invalid.sum())
@@ -279,7 +282,9 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    df[OUTPUT_COLUMNS].to_csv(output_path, index=False, encoding="utf-8-sig", na_rep="")
+    output_df = df[OUTPUT_COLUMNS].copy()
+    output_df["occupancy"] = output_df["occupancy"].astype("string").str.lower()
+    output_df.to_csv(output_path, index=False, encoding="utf-8-sig", na_rep="")
 
     report = build_report(
         input_path=input_path,
@@ -329,20 +334,34 @@ def build_report(
         "invalid_room_id": "会议室编号无法识别，记录不进入清洗结果",
         "missing_room_id": "会议室编号为必填字段，记录不进入清洗结果",
         "room_db_id_mismatch": "以 room_id 中的数字为准重新生成 room_db_id",
+        "missing_device_id": "保留为空值并标记 abnormal",
+        "missing_event_type_filled": "补为 telemetry 并标记 abnormal",
+        "invalid_temperature": "置为空值并标记 abnormal",
+        "missing_temperature": "保留为空值并标记 abnormal",
         "temperature_out_of_range": "置为空值并标记 abnormal",
+        "invalid_humidity": "置为空值并标记 abnormal",
+        "missing_humidity": "保留为空值并标记 abnormal",
         "humidity_out_of_range": "置为空值并标记 abnormal",
+        "invalid_light_raw": "置为空值并标记 abnormal",
         "light_raw_out_of_range": "置为空值并标记 abnormal",
+        "invalid_smoke_raw": "置为空值并标记 abnormal",
         "smoke_raw_out_of_range": "置为空值并标记 abnormal",
+        "invalid_people_count": "置为空值并标记 abnormal",
+        "missing_people_count": "保留为空值并标记 abnormal",
         "people_count_out_of_range": "置为空值并标记 abnormal",
         "invalid_occupancy": "置为空值并标记 abnormal",
+        "missing_occupancy": "保留为空值并标记 abnormal",
         "invalid_door_state": "置为空值并标记 abnormal",
-        "invalid_sensor_status": "置为空值并标记 abnormal",
+        "missing_door_state": "保留为空值并标记 abnormal",
     }
     anomaly_rows = []
-    for label, action in anomaly_actions.items():
-        count = int(anomaly_counts.get(label, 0))
-        if count:
-            anomaly_rows.append(f"| `{label}` | {count} | {action} |")
+    for label in sorted(anomaly_counts):
+        action = anomaly_actions.get(label)
+        if action is None and label.startswith("sensor_status_"):
+            action = "保留状态并标记 abnormal"
+        if action is None:
+            action = "保留问题标记，供人工检查"
+        anomaly_rows.append(f"| `{label}` | {int(anomaly_counts[label])} | {action} |")
     if not anomaly_rows:
         anomaly_rows.append("| 无 | 0 | 无需处理 |")
 
@@ -350,6 +369,16 @@ def build_report(
     room_rows = [f"| `{room_id}` | {int(count)} |" for room_id, count in room_counts.items()]
     normal_count = int((cleaned["quality"] == "normal").sum())
     abnormal_count = int((cleaned["quality"] == "abnormal").sum())
+    cleaned_timestamps = pd.to_datetime(cleaned["timestamp"], errors="coerce")
+    start_time = cleaned_timestamps.min()
+    end_time = cleaned_timestamps.max()
+    unique_timestamps = cleaned_timestamps.dropna().drop_duplicates().sort_values()
+    sampling_interval = unique_timestamps.diff().dropna().mode()
+    sampling_minutes = (
+        int(sampling_interval.iloc[0].total_seconds() // 60)
+        if not sampling_interval.empty
+        else 0
+    )
 
     return "\n".join(
         [
@@ -360,6 +389,8 @@ def build_report(
             f"- 原始文件：`{relative_display(input_path)}`",
             f"- 清洗结果：`{relative_display(output_path)}`",
             "- 数据性质：当前没有可导出的真实历史数据，因此本次使用模拟原始数据。",
+            f"- 数据周期：{start_time:%Y-%m-%d %H:%M:%S} 至 {end_time:%Y-%m-%d %H:%M:%S}，覆盖连续一周。",
+            f"- 采样设置：3 个会议室，每 {sampling_minutes} 分钟生成一条监测记录。",
             "- 字段来源：本仓库树莓派遥测载荷、后端 `IotTelemetryRequest`、`IotSensorRecord` 和 `iot_sensor_record` 表结构。",
             "- 模拟数据专门包含重复、缺失、越界值和命名不一致，用于验证清洗流程；不得描述为真实树莓派采集数据。",
             "",
@@ -380,7 +411,7 @@ def build_report(
             "- 原始 `room_code` 统一命名为 `room_id`；数据库整数主键保留为 `room_db_id`。",
             "- `room-14`、`room_14`、`14`、`Meeting Room 14` 等写法统一为 `meeting_room_14`。",
             "- 时间统一为 `YYYY-MM-DD HH:MM:SS`，并按时间、会议室和设备升序排列。",
-            "- 原始 `presence` 统一为分析字段 `occupancy`，取值统一为 0 或 1。",
+            "- 原始 `presence` 统一为分析字段 `occupancy`，CSV 使用小写 `true` 或 `false` 表示布尔值。",
             "- `opened`、`open` 统一为 `open`，`close`、`closed` 统一为 `closed`。",
             "- `device_id`、`event_type` 和 `sensor_status` 统一为小写。",
             "",
@@ -398,7 +429,7 @@ def build_report(
             "| --- | ---: | ---: |",
             *missing_rows,
             "",
-            "处理原则：时间和会议室编号是定位记录所必需的字段，缺失或非法时删除整条记录；温度、湿度、人员状态等传感器字段不凭空填充，保留为空并通过 `quality=abnormal` 和 `quality_issues` 说明原因。",
+            "处理原则：时间和会议室编号是定位记录所必需的字段，缺失或非法时删除整条记录；温度、湿度、人员状态等传感器字段不凭空填充，保留为空并通过 `quality=abnormal` 和 `quality_issues` 说明原因。源值缺失、格式非法和数值越界分别记录，不重复追加互相矛盾的问题标签。",
             "",
             "## 清洗后会议室分布",
             "",
@@ -412,7 +443,9 @@ def build_report(
             "",
             "```powershell",
             "python -m pip install -r scripts/requirements.txt",
+            "python scripts/generate_weekly_data.py",
             "python scripts/clean_data.py",
+            "python -m unittest -v tests/test_clean_data.py",
             "```",
             "",
             "脚本每次都从原始 CSV 重新生成清洗结果和本报告，不依赖上一次运行的输出。",
