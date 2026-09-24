@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080'
 
-export function useIoTWebSocket() {
+export function useIoTWebSocket(roomId = () => 14) {
   const connected = ref(false)
   const temperature = ref(null)
   const humidity = ref(null)
@@ -26,12 +26,15 @@ export function useIoTWebSocket() {
   }
 
   const pollLatest = async () => {
+    const requestedRoom = roomId()
+    if (!requestedRoom) return
     try {
-      const res = await fetch(`${API_BASE_URL}/iot/rooms/14/latest`, {
+      const res = await fetch(`${API_BASE_URL}/iot/rooms/${requestedRoom}/latest`, {
         headers: sessionHeaders(),
         credentials: 'include'
       })
       const json = await res.json()
+      if (requestedRoom !== roomId()) return
       const env = json?.data?.environment
       if (env) {
         applyEnv(env)
@@ -58,12 +61,15 @@ export function useIoTWebSocket() {
   }
 
   const pollLastSeven = async () => {
+    const requestedRoom = roomId()
+    if (!requestedRoom) return
     try {
-      const res = await fetch(`${API_BASE_URL}/iot/rooms/14/last-seven`, {
+      const res = await fetch(`${API_BASE_URL}/iot/rooms/${requestedRoom}/last-seven`, {
         headers: sessionHeaders(),
         credentials: 'include'
       })
       const json = await res.json()
+      if (requestedRoom !== roomId()) return
       const list = json?.data || json || []
       if (Array.isArray(list) && list.length > 0) {
         const reversed = [...list].reverse()
@@ -126,5 +132,6 @@ export function useIoTWebSocket() {
     connect,
     disconnect,
     resetPeopleCount,
+    refresh: pollAll,
   }
 }

@@ -121,19 +121,19 @@
                     </button>
                   </div>
                   <div class="ac-inline-row temp-row">
-                    <button class="ac-circle-sm" :disabled="!controlAllowed || !acPower || acTemperature <= 16" @click="acTemperature--">−</button>
-                    <input type="range" class="ac-slider-sm" min="16" max="30" v-model.number="acTemperature" :disabled="!controlAllowed || !acPower" />
-                    <button class="ac-circle-sm" :disabled="!controlAllowed || !acPower || acTemperature >= 30" @click="acTemperature++">+</button>
+                    <button class="ac-circle-sm" disabled title="设备暂不支持温度设定">−</button>
+                    <input type="range" class="ac-slider-sm" min="16" max="30" v-model.number="acTemperature" disabled title="设备暂不支持温度设定" />
+                    <button class="ac-circle-sm" disabled title="设备暂不支持温度设定">+</button>
                     <span class="ac-temp-val">{{ acTemperature }}°C</span>
                   </div>
                   <div class="ac-inline-row chip-row">
-                    <button v-for="m in acModes" :key="m.value" class="ac-chip-sm" :class="{ sel: acMode === m.value }" :disabled="!controlAllowed || !acPower" @click="acMode = m.value">{{ m.icon }} {{ m.label }}</button>
+                    <button v-for="m in acModes" :key="m.value" class="ac-chip-sm" :class="{ sel: acMode === m.value }" :disabled="!controlAllowed || !acPower || !['cool', 'heat', 'dry'].includes(m.value)" @click="acMode = m.value">{{ m.icon }} {{ m.label }}</button>
                   </div>
                   <div class="ac-inline-row chip-row">
-                    <button v-for="f in acFanSpeeds" :key="f.value" class="ac-chip-sm" :class="{ sel: acFanSpeed === f.value }" :disabled="!controlAllowed || !acPower" @click="acFanSpeed = f.value">{{ f.label }}</button>
+                    <button v-for="f in acFanSpeeds" :key="f.value" class="ac-chip-sm" :class="{ sel: acFanSpeed === f.value }" disabled title="设备暂不支持风速设定">{{ f.label }}</button>
                   </div>
                   <div class="ac-inline-row chip-row">
-                    <button v-for="d in acSwingDirs" :key="d.value" class="ac-chip-sm" :class="{ sel: acSwingDir === d.value }" :disabled="!controlAllowed || !acPower" @click="acSwingDir = d.value">{{ d.icon }} {{ d.label }}</button>
+                    <button v-for="d in acSwingDirs" :key="d.value" class="ac-chip-sm" :class="{ sel: acSwingDir === d.value }" disabled title="设备暂不支持风向设定">{{ d.icon }} {{ d.label }}</button>
                   </div>
                 </div>
 
@@ -222,7 +222,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
-import { getControlRoomsAPI, getDeviceControlAccessAPI, getUserInfoAPI, sendDeviceCommandAPI } from '@/apis/meetingControlAPI.js'
+import { getControlRoomsAPI, getDeviceControlAccessAPI, getDeviceLatestAPI, getUserInfoAPI, sendDeviceCommandAPI } from '@/apis/meetingControlAPI.js'
 import { useIoTWebSocket } from '@/composables/useIoTWebSocket.js'
 
 const router = useRouter()
@@ -238,11 +238,13 @@ const roomHtmlMap = {
   room3: '/3d/sunny-meeting-room.html',
 }
 const roomDeviceMap = reactive({})
+const roomIdMap = reactive({})
 const controlAllowed = ref(false)
 const checkingControlAccess = ref(false)
 const controlAccessMessage = ref('')
 
 const checkControlAccess = async () => {
+  const room = currentRoom.value
   const deviceId = roomDeviceMap[currentRoom.value]
   controlAllowed.value = false
   controlAccessMessage.value = ''
@@ -251,6 +253,7 @@ const checkControlAccess = async () => {
   checkingControlAccess.value = true
   try {
     const response = await getDeviceControlAccessAPI(deviceId)
+    if (currentRoom.value !== room) return false
     controlAllowed.value = response.data?.code === 1 && response.data?.data?.allowed === true
     controlAccessMessage.value = response.data?.data?.message || ''
   } catch (error) {
@@ -279,6 +282,7 @@ const loadControlRooms = async () => {
       const value = `room${slot}`
       roomNameMap[value] = room.roomName || `会议室 ${room.roomNumber ?? room.roomId}`
       roomDeviceMap[value] = room.deviceId
+      roomIdMap[value] = room.roomId
       return {
         value,
         label: room.roomName || `会议室 ${room.roomNumber ?? room.roomId}`,
@@ -311,8 +315,11 @@ const loadControlRooms = async () => {
 }
 
 const selectRoom = (val) => {
+  if (pendingCommands.size) return
   currentRoom.value = val
   checkControlAccess()
+  refreshDeviceState()
+  iot.refresh()
   threeReady.value = false
   if (threeIframe.value) {
     threeIframe.value.src = roomHtmlMap[val] || roomHtmlMap.room1
@@ -371,22 +378,49 @@ const sendHardwareCommand = async (target, value, params = {}) => {
   pendingCommands.add(commandKey)
   try {
     const response = await sendDeviceCommandAPI(deviceId, {
-      command: 'set_device',
+      command: target === 'airConditioner' ? 'set_climate_mode' : 'set_device_state',
       target,
       value,
-      params,
+      params: target === 'airConditioner' ? { mode: params.mode || acMode.value } : params,
     })
-    if (response.data?.code !== 1) {
+    if (response.data?.code !== 1 || response.data?.data?.status !== 'success') {
       throw new Error(response.data?.message || '设备控制失败')
     }
+    addLog(`${target}: 设备已确认执行`)
     return true
   } catch (error) {
     const message = error.response?.data?.message || error.message || '设备控制失败'
     ElMessage.error(message)
     addLog(`设备控制失败: ${message}`)
+    // Let the caller finish rollback before applying authoritative device state.
+    setTimeout(() => { refreshDeviceState(); checkControlAccess() }, 0)
     return false
   } finally {
     pendingCommands.delete(commandKey)
+  }
+}
+
+const refreshDeviceState = async () => {
+  const deviceId = roomDeviceMap[currentRoom.value]
+  if (!deviceId) return
+  try {
+    const response = await getDeviceLatestAPI(deviceId)
+    if (deviceId !== roomDeviceMap[currentRoom.value] || response.data?.code !== 1) return
+    const devices = response.data.data?.devices || {}
+    if (typeof devices.light_on === 'boolean' && devices.light_on !== deviceState.light) {
+      rollbackState('light', value => { deviceState.light = value }, devices.light_on)
+    }
+    if (typeof devices.projector === 'boolean' && devices.projector !== deviceState.projector) {
+      rollbackState('projector', value => { deviceState.projector = value }, devices.projector)
+    }
+    if (typeof devices.cooling === 'boolean' && typeof devices.heating === 'boolean') {
+      const powered = devices.cooling || devices.heating || devices.dehumidifier === true
+      if (powered !== acPower.value) rollbackState('acPower', value => { acPower.value = value }, powered)
+      const mode = devices.heating ? 'heat' : devices.dehumidifier ? 'dry' : 'cool'
+      if (mode !== acMode.value) rollbackState('acMode', value => { acMode.value = value }, mode)
+    }
+  } catch {
+    addLog('设备状态暂时无法确认')
   }
 }
 
@@ -491,7 +525,7 @@ watch(acSwingDir, async (v, old) => {
   if (!success && acSwingDir.value === v) rollbackState('acSwingDir', value => { acSwingDir.value = value }, old)
 })
 // ---- IoT WebSocket ----
-const iot = useIoTWebSocket()
+const iot = useIoTWebSocket(() => roomIdMap[currentRoom.value])
 
 watch(() => iot.doorState.value, (v) => {
   if (v === '已关闭' || v === '已打开') sendToThree('door', v === '已关闭')
@@ -534,13 +568,7 @@ const addLog = (msg) => {
   setTimeout(() => { if (logListRef.value) logListRef.value.scrollTop = 0 }, 50)
 }
 
-watch(acPower, (v) => { deviceState.airConditioner = v; addLog(v ? '空调已开启' : '空调已关闭') })
-watch(acTemperature, (v, old) => { if (old !== undefined) addLog('温度调整为 ' + v + '°C') })
-watch(acMode, () => { addLog('模式切换：' + acModeLabel.value) })
-watch(acFanSpeed, () => { addLog('风速切换：' + acFanLabel.value) })
-watch(acSwingDir, () => { addLog('风向切换：' + acSwingLabel.value) })
-watch(() => deviceState.light, (v) => { addLog(v ? '灯光已开启' : '灯光已关闭') })
-watch(() => deviceState.projector, (v) => { addLog(v ? '投影仪已开启' : '投影仪已关闭') })
+watch(acPower, (v) => { deviceState.airConditioner = v })
 
 const applyScene = scene => {
   if (!controlAllowed.value) {
@@ -653,6 +681,7 @@ onMounted(async () => {
   await loadControlRooms()
   if (controlRoomsLoaded.value && roomOptions.value.length > 0) {
     await checkControlAccess()
+    await refreshDeviceState()
   }
   iot.connect()
   renderCharts()

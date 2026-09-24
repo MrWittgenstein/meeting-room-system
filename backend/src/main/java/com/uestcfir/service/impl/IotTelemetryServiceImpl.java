@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -48,6 +49,8 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private com.uestcfir.service.BusinessCacheInvalidator cacheInvalidator;
 
     @Override
     @Transactional
@@ -75,6 +78,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
         iotSensorRecordMapper.insert(record);
         record.setPayloadJson(buildNormalizedPayloadJson(record, rawPayloadJson));
         upsertRoomStatus(record, now);
+        cacheInvalidator.telemetryChanged(record.getRoomId(), record.getDeviceId());
 
         log.info("Saved iot telemetry. deviceId={}, roomId={}, roomCode={}, recordId={}",
                 record.getDeviceId(), record.getRoomId(), record.getRoomCode(), record.getId());
@@ -82,6 +86,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "iot:latest-room", key = "#p0", condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public IotSensorRecord getLatestByRoomId(Integer roomId) {
         validateRoomId(roomId);
         IotSensorRecord record = iotSensorRecordMapper.findLatestByRoomId(roomId);
@@ -92,6 +97,8 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "iot:recent-room", key = "#p0 + ':' + (#p1 == null ? 20 : (#p1 < 1 ? 1 : (#p1 > 200 ? 200 : #p1)))",
+            condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public List<IotSensorRecord> getRecentByRoomId(Integer roomId, Integer limit) {
         validateRoomId(roomId);
         int safeLimit = limit == null ? 20 : Math.max(1, Math.min(limit, 200));
@@ -99,6 +106,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "iot:latest-device", key = "#p0.trim()", condition = "#p0 != null && !#p0.isBlank() && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public IotSensorRecord getLatestByDeviceId(String deviceId) {
         if (StringUtils.isBlank(deviceId)) {
             throw new BusinessException("deviceId can not be empty");
@@ -111,6 +119,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "iot:room-status", key = "#p0", condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public IotRoomStatus getRoomStatus(Integer roomId) {
         validateRoomId(roomId);
         IotRoomStatus roomStatus = iotRoomStatusMapper.findByRoomId(roomId);
@@ -155,6 +164,15 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     private ResolvedRoom resolveRoom(IotTelemetryRequest request, String deviceId) {
+        IotDevice registered = iotDeviceMapper.findByDeviceId(deviceId);
+        if (registered == null || registered.getRoomId() == null) {
+            throw new BusinessException(403, "Device must be registered with a room before reporting");
+        }
+        if (request.getRoomId() != null && !registered.getRoomId().equals(request.getRoomId())) {
+            throw new BusinessException(403, "Device cannot change its registered room");
+        }
+        request.setRoomId(registered.getRoomId());
+        request.setRoomCode(registered.getRoomCode());
         if (request.getRoomId() != null) {
             Meetingroom meetingroom = meetingroomMapper.getMeetingroomById(request.getRoomId());
             if (meetingroom == null) {

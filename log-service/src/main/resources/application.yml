@@ -1,0 +1,22 @@
+server:
+  address: ${LOG_SERVICE_BIND_ADDRESS:127.0.0.1}
+  port: ${LOG_SERVICE_PORT:8083}
+spring:
+  application:
+    name: meetingroom-log-service
+  datasource:
+    url: ${CLICKHOUSE_JDBC_URL:jdbc:clickhouse://127.0.0.1:8123/default?compress=0&socket_timeout=10000}
+    username: ${CLICKHOUSE_USER:default}
+    password: ${CLICKHOUSE_PASSWORD:}
+    driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+    hikari:
+      maximum-pool-size: 4
+      connection-timeout: 5000
+      initialization-fail-timeout: -1
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3s

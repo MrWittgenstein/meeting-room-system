@@ -25,6 +25,9 @@ frontend/front-end/
 *.log
 *.tmp
 *.cache
+**/run-logs/
+**/edge-debug-profile/
+**/edge-final-profile/
 
 # 本地配置
 .env

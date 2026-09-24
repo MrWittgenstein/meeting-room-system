@@ -31,6 +31,7 @@ import com.uestcfir.pojo.vo.MeetingroomQueryVo;
 import com.uestcfir.exception.BusinessException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
 
 /**
  * 会议室服务实现类
@@ -51,6 +52,8 @@ public class MeetroomImpl implements MeetroomService {
     OssFileStorageService ossFileStorageService;
     @Autowired
     ImageProcessService imageProcessService;
+    @Autowired
+    com.uestcfir.service.BusinessCacheInvalidator cacheInvalidator;
 
     @Override
     public void updateMeetroom(UpdateMeeingroomDto meetingroomDto){
@@ -59,6 +62,7 @@ public class MeetroomImpl implements MeetroomService {
             throw new BusinessException("会议室开放时间必须早于关闭时间");
         }
         meetingroomMapper.updateMeetingroomSelective(meetingroomDto);
+        cacheInvalidator.roomsChanged();
 
     }
 
@@ -101,6 +105,7 @@ public class MeetroomImpl implements MeetroomService {
         }
         Meetingroom meetingroom = new Meetingroom(null,meetingroomDto.getRoomNumber(), meetingroomDto.getRoomName(), meetingroomDto.getCapacity(), meetingroomDto.getLocation(), meetingroomDto.getStatus(), meetingroomDto.getOpenTime(), meetingroomDto.getCloseTime(), meetingroomDto.getType(),null,null ,meetingroomDto.getDescription(),LocalDateTime.now(),LocalDateTime.now());
         Integer affectedRows = meetingroomMapper.insertMeetingroom(meetingroom);
+        cacheInvalidator.roomsChanged();
         Integer roomId = meetingroom.getRoomId();
         if(image != null){
             ImageUploadResult imageresult = ossFileStorageService.storeroomimage(image,roomId );
@@ -164,6 +169,8 @@ public class MeetroomImpl implements MeetroomService {
      * @param size 每页大小
      * @return 会议室列表
      */
+    @Cacheable(cacheNames = "meetingroom:list", key = "#p0 + ':' + #p1",
+            condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public List<Meetingroom> getAllMeetingroomList(Integer page, Integer size) {
         log.info("Getting all meetrooms");
         try {
@@ -188,6 +195,7 @@ public class MeetroomImpl implements MeetroomService {
         log.info("Deleting meetingroom with id " + roomId);
         reservationMapper.deleteReservationByRoomId(roomId);
         if (meetingroomMapper.deleteMeetingroomById(roomId)) {
+            cacheInvalidator.roomDeleted(roomId);
             log.info("Deleting meetingroom successfully " + roomId);
         }
         else {

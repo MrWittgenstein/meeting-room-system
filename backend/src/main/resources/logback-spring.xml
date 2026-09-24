@@ -1,0 +1,22 @@
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="meetingroom-main"/>
+    <property name="ACCESS_LOG_DIR" value="${ACCESS_LOG_DIR:-run-logs/access}"/>
+    <appender name="ACCESS_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ACCESS_LOG_DIR}/${APP_NAME}-access.jsonl</file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ACCESS_LOG_DIR}/${APP_NAME}-access.%d{${ACCESS_LOG_DATE_PATTERN:-yyyy-MM-dd}}.%i.jsonl</fileNamePattern>
+            <maxHistory>${ACCESS_LOG_HISTORY:-30}</maxHistory>
+            <maxFileSize>${ACCESS_LOG_MAX_FILE_SIZE:-100MB}</maxFileSize>
+            <totalSizeCap>${ACCESS_LOG_TOTAL_SIZE:-3GB}</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+    <logger name="ACCESS_LOG" level="INFO" additivity="false">
+        <appender-ref ref="ACCESS_JSON"/>
+    </logger>
+</configuration>

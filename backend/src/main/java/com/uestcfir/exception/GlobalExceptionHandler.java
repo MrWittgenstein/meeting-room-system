@@ -15,7 +15,8 @@ import java.io.IOException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler
-    public Result handleException(BusinessException e) {
+    public Result handleException(BusinessException e, jakarta.servlet.http.HttpServletResponse response) {
+        response.setStatus(e.getStatus());
         log.error("BusinessException occurred: {}", e.getMessage());
         return Result.fail(e.getMessage());
     }

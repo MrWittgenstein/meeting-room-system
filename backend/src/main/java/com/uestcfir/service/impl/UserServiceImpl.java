@@ -102,7 +102,7 @@ public class UserServiceImpl implements UserService {
      */
     @Transactional
     public Result register(UserDto user) throws Exception {
-        log.info("Registering user: {}", user);
+        log.info("User registration requested");
         //加密密码
         String password = passwordEncoder.encode(user.getPassword());
         // 计算邮箱哈希
@@ -149,7 +149,7 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果登录失败
      */
     public User loginbyEmail(LoginByEmailDto user) {
-        log.info("Login user: {}", user);
+        log.info("User login requested");
         String email_Hash = encryptionService.computeEmailHash(user.getEmail());
 
         User finaluser = userMapper.selectByEmailHash(email_Hash);
@@ -265,5 +265,4 @@ public class UserServiceImpl implements UserService {
 
 
 }
-
 

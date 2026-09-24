@@ -92,7 +92,7 @@ public interface ReservationMapper {
               AND room_id = #{roomId}
               AND reserve_date = #{date}
               AND start_time <= #{time}
-              AND end_time >= #{time}
+              AND end_time > #{time}
               AND status IN (3, 4)
             """)
     boolean existsActiveReservation(@Param("userId") Integer userId,
