@@ -1,0 +1,23 @@
+{
+  "pdf": "D:\\note\\some_program\\meeting-room-system\\docs\\week4\\figures\\01_invalid_runtime_heatmap.pdf",
+  "auditable": true,
+  "verdict": "PASS",
+  "page_count": 1,
+  "visible_text_box_count": 47,
+  "text_trace_count": 51,
+  "stroke_path_count": 46,
+  "filled_region_count": 46,
+  "image_region_count": 2,
+  "summary": {
+    "fail": 0,
+    "warn": 0,
+    "contained_fill_overlays": 0,
+    "contained_image_overlays": 0
+  },
+  "thresholds": {
+    "text_inset_pt": 0.6,
+    "min_overlap_ratio": 0.05,
+    "clipping_tolerance_pt": 0.5
+  },
+  "findings": []
+}

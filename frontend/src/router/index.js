@@ -11,6 +11,7 @@ import pendingApprovalList from '../views/manager/components/pendingApprovalLIst
 import approvedList from '../views/manager/components/approvedList.vue'// 已审批页面
 import personalInfo from '../views/manager/components/personalInfo.vue'// 个人信息页面
 import notificationManagement from '../views/manager/components/notificationManagement.vue'// 消息通知管理页面
+import dataAnalysis from '../views/manager/components/dataAnalysis.vue' // 第 4 周数据分析页面
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   //path和component的映射关系
@@ -43,6 +44,12 @@ const router = createRouter({
           path: 'meetingRoomRecords',
           component: meetingRoomRecords,
           name: 'meetingRoomRecords'
+        },
+        // 数据分析
+        {
+          path: 'dataAnalysis',
+          component: dataAnalysis,
+          name: 'dataAnalysis'
         },
 
         // 待审批

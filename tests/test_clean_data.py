@@ -32,6 +32,7 @@ class CleanDataTest(unittest.TestCase):
                 "Room DB ID",
                 "Device ID",
                 "Event Type",
+                "Data Mode",
                 "Temperature",
                 "Humidity",
                 "Light Raw",
@@ -40,10 +41,14 @@ class CleanDataTest(unittest.TestCase):
                 "People Count",
                 "Door State",
                 "Sensor Status",
+                "Lighting On",
+                "Air Conditioner On",
+                "Projector On",
+                "Booking Status",
             ]
             rows = [
-                ["2026-09-15 09:00:00", "meeting_room_14", 14, "raspi-01", "telemetry", "", 50, 120, 10, 1, 3, "closed", "ok"],
-                ["2026-09-15 09:05:00", "meeting_room_14", 14, "raspi-01", "telemetry", 85, 50, 120, 10, 0, 0, "closed", "ok"],
+                ["2026-09-15 09:00:00", "meeting_room_14", 14, "raspi-01", "telemetry", "simulated", "", 50, 120, 10, 1, 3, "closed", "ok", 1, 1, 1, "approved"],
+                ["2026-09-15 09:05:00", "meeting_room_14", 14, "raspi-01", "telemetry", "simulated", 85, 50, 120, 10, 0, 0, "closed", "ok", 0, 0, 0, "none"],
             ]
             with raw_path.open("w", encoding="utf-8-sig", newline="") as raw_file:
                 writer = csv.writer(raw_file)
@@ -60,6 +65,8 @@ class CleanDataTest(unittest.TestCase):
             self.assertIn("temperature_out_of_range", outlier_issues)
             self.assertNotIn("missing_temperature", outlier_issues)
             self.assertEqual(["true", "false"], cleaned["occupancy"].tolist())
+            self.assertEqual(["true", "false"], cleaned["lighting_on"].tolist())
+            self.assertEqual(["simulated", "simulated"], cleaned["data_mode"].tolist())
 
     def test_weekly_dataset_has_expected_coverage_and_boolean_occupancy(self) -> None:
         with tempfile.TemporaryDirectory() as temp_directory:
@@ -72,22 +79,25 @@ class CleanDataTest(unittest.TestCase):
             cleaned_result = clean_data(raw_path, output_path, report_path)
             cleaned = pd.read_csv(output_path, dtype=str, keep_default_na=False)
 
-            self.assertEqual(6048, generated["base_count"])
-            self.assertEqual(6053, generated["output_count"])
+            self.assertEqual(12096, generated["base_count"])
+            self.assertEqual(12101, generated["output_count"])
             self.assertEqual(2, cleaned_result["duplicate_count"])
             self.assertEqual(3, cleaned_result["dropped_mandatory_count"])
-            self.assertEqual(6048, cleaned_result["after_count"])
+            self.assertEqual(12096, cleaned_result["after_count"])
             self.assertEqual("2026-09-15 00:00:00", cleaned["timestamp"].min())
-            self.assertEqual("2026-09-21 23:55:00", cleaned["timestamp"].max())
+            self.assertEqual("2026-09-28 23:55:00", cleaned["timestamp"].max())
             self.assertEqual(
                 {"meeting_room_14", "meeting_room_15", "meeting_room_32"},
                 set(cleaned["room_id"]),
             )
             self.assertEqual(
-                {"meeting_room_14": 2016, "meeting_room_15": 2016, "meeting_room_32": 2016},
+                {"meeting_room_14": 4032, "meeting_room_15": 4032, "meeting_room_32": 4032},
                 cleaned["room_id"].value_counts().sort_index().to_dict(),
             )
             self.assertLessEqual(set(cleaned["occupancy"]), {"", "true", "false"})
+            self.assertEqual({"simulated", "unknown"}, set(cleaned["data_mode"]))
+            for column in ["lighting_on", "air_conditioner_on", "projector_on"]:
+                self.assertLessEqual(set(cleaned[column]), {"", "true", "false"})
             conflicting = cleaned["quality_issues"].str.contains("temperature_out_of_range") & cleaned[
                 "quality_issues"
             ].str.contains("missing_temperature")

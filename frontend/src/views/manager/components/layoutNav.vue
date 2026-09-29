@@ -28,6 +28,7 @@
         <el-menu-item-group>
           <el-menu-item index="/manager/meetingRoomInfo">会议室信息</el-menu-item>
           <el-menu-item index="/manager/meetingRoomRecords">会议室使用记录</el-menu-item>
+          <el-menu-item index="/manager/dataAnalysis">数据分析</el-menu-item>
         </el-menu-item-group>
       </el-sub-menu>
 

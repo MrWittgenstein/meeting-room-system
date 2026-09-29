@@ -27,6 +27,7 @@ EXPECTED_COLUMNS = [
     "room_db_id",
     "device_id",
     "event_type",
+    "data_mode",
     "temperature",
     "humidity",
     "light_raw",
@@ -35,6 +36,10 @@ EXPECTED_COLUMNS = [
     "people_count",
     "door_state",
     "sensor_status",
+    "lighting_on",
+    "air_conditioner_on",
+    "projector_on",
+    "booking_status",
 ]
 
 OUTPUT_COLUMNS = [
@@ -136,6 +141,13 @@ def normalize_sensor_status(value: Any) -> Any:
     return normalized or pd.NA
 
 
+def normalize_enum(value: Any, allowed: set[str]) -> Any:
+    normalized = normalize_text(value)
+    if pd.isna(normalized):
+        return pd.NA
+    return normalized if normalized in allowed else pd.NA
+
+
 def relative_display(path: Path) -> str:
     try:
         return path.resolve().relative_to(REPO_ROOT).as_posix()
@@ -204,6 +216,14 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
     add_issue(missing_event_type, "missing_event_type_filled")
     df.loc[missing_event_type, "event_type"] = "telemetry"
 
+    original_data_mode = df["data_mode"].copy()
+    df["data_mode"] = df["data_mode"].map(
+        lambda value: normalize_enum(value, {"real", "simulated"})
+    )
+    add_issue(original_data_mode.notna() & df["data_mode"].isna(), "invalid_data_mode")
+    add_issue(original_data_mode.isna(), "missing_data_mode")
+    df.loc[df["data_mode"].isna(), "data_mode"] = "unknown"
+
     numeric_columns = [
         "temperature",
         "humidity",
@@ -238,6 +258,30 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
     df["occupancy"] = df["occupancy"].map(normalize_binary).astype("boolean")
     add_issue(original_occupancy.notna() & df["occupancy"].isna(), "invalid_occupancy")
 
+    device_state_columns = [
+        "lighting_on",
+        "air_conditioner_on",
+        "projector_on",
+    ]
+    for column in device_state_columns:
+        original_state = df[column].copy()
+        df[column] = df[column].map(normalize_binary).astype("boolean")
+        add_issue(original_state.notna() & df[column].isna(), f"invalid_{column}")
+
+    original_booking_status = df["booking_status"].copy()
+    df["booking_status"] = df["booking_status"].map(
+        lambda value: normalize_enum(
+            value,
+            {"none", "approved", "pending", "rejected", "cancelled"},
+        )
+    )
+    add_issue(
+        original_booking_status.notna() & df["booking_status"].isna(),
+        "invalid_booking_status",
+    )
+    add_issue(original_booking_status.isna(), "missing_booking_status")
+    df.loc[df["booking_status"].isna(), "booking_status"] = "unknown"
+
     original_door_state = df["door_state"].copy()
     df["door_state"] = df["door_state"].map(normalize_door_state)
     add_issue(original_door_state.notna() & df["door_state"].isna(), "invalid_door_state")
@@ -254,6 +298,7 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
         "occupancy",
         "people_count",
         "door_state",
+        *device_state_columns,
     ]:
         add_issue(source_missing[column], f"missing_{column}")
 
@@ -283,7 +328,8 @@ def clean_data(input_path: Path, output_path: Path, report_path: Path) -> dict[s
     output_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     output_df = df[OUTPUT_COLUMNS].copy()
-    output_df["occupancy"] = output_df["occupancy"].astype("string").str.lower()
+    for column in ["occupancy", *device_state_columns]:
+        output_df[column] = output_df[column].astype("string").str.lower()
     output_df.to_csv(output_path, index=False, encoding="utf-8-sig", na_rep="")
 
     report = build_report(
@@ -336,6 +382,8 @@ def build_report(
         "room_db_id_mismatch": "以 room_id 中的数字为准重新生成 room_db_id",
         "missing_device_id": "保留为空值并标记 abnormal",
         "missing_event_type_filled": "补为 telemetry 并标记 abnormal",
+        "invalid_data_mode": "改为 unknown，不能并入真实数据结论",
+        "missing_data_mode": "补为 unknown，不能并入真实数据结论",
         "invalid_temperature": "置为空值并标记 abnormal",
         "missing_temperature": "保留为空值并标记 abnormal",
         "temperature_out_of_range": "置为空值并标记 abnormal",
@@ -351,6 +399,14 @@ def build_report(
         "people_count_out_of_range": "置为空值并标记 abnormal",
         "invalid_occupancy": "置为空值并标记 abnormal",
         "missing_occupancy": "保留为空值并标记 abnormal",
+        "invalid_lighting_on": "置为空值并标记 abnormal",
+        "missing_lighting_on": "保留为空值并标记 abnormal",
+        "invalid_air_conditioner_on": "置为空值并标记 abnormal",
+        "missing_air_conditioner_on": "保留为空值并标记 abnormal",
+        "invalid_projector_on": "置为空值并标记 abnormal",
+        "missing_projector_on": "保留为空值并标记 abnormal",
+        "invalid_booking_status": "改为 unknown 并标记 abnormal",
+        "missing_booking_status": "改为 unknown 并标记 abnormal",
         "invalid_door_state": "置为空值并标记 abnormal",
         "missing_door_state": "保留为空值并标记 abnormal",
     }
@@ -379,6 +435,7 @@ def build_report(
         if not sampling_interval.empty
         else 0
     )
+    coverage_days = int(round((end_time - start_time).total_seconds() / 86400 + sampling_minutes / 1440))
 
     return "\n".join(
         [
@@ -389,7 +446,7 @@ def build_report(
             f"- 原始文件：`{relative_display(input_path)}`",
             f"- 清洗结果：`{relative_display(output_path)}`",
             "- 数据性质：当前没有可导出的真实历史数据，因此本次使用模拟原始数据。",
-            f"- 数据周期：{start_time:%Y-%m-%d %H:%M:%S} 至 {end_time:%Y-%m-%d %H:%M:%S}，覆盖连续一周。",
+            f"- 数据周期：{start_time:%Y-%m-%d %H:%M:%S} 至 {end_time:%Y-%m-%d %H:%M:%S}，覆盖连续 {coverage_days} 天。",
             f"- 采样设置：3 个会议室，每 {sampling_minutes} 分钟生成一条监测记录。",
             "- 字段来源：本仓库树莓派遥测载荷、后端 `IotTelemetryRequest`、`IotSensorRecord` 和 `iot_sensor_record` 表结构。",
             "- 模拟数据专门包含重复、缺失、越界值和命名不一致，用于验证清洗流程；不得描述为真实树莓派采集数据。",
@@ -412,6 +469,9 @@ def build_report(
             "- `room-14`、`room_14`、`14`、`Meeting Room 14` 等写法统一为 `meeting_room_14`。",
             "- 时间统一为 `YYYY-MM-DD HH:MM:SS`，并按时间、会议室和设备升序排列。",
             "- 原始 `presence` 统一为分析字段 `occupancy`，CSV 使用小写 `true` 或 `false` 表示布尔值。",
+            "- `data_mode` 明确区分 `real` 与 `simulated`；未知来源统一标为 `unknown`，不得并入真实数据结论。",
+            "- 灯光、空调和投影状态统一为 `lighting_on`、`air_conditioner_on`、`projector_on`，使用小写布尔值。",
+            "- 预约状态统一为 `none`、`approved`、`pending`、`rejected`、`cancelled`；非法状态改为 `unknown`。",
             "- `opened`、`open` 统一为 `open`，`close`、`closed` 统一为 `closed`。",
             "- `device_id`、`event_type` 和 `sensor_status` 统一为小写。",
             "",

@@ -781,6 +781,28 @@ python sensor_server.py --config config.json --demo
 - 增加自动化测试
 - 完善部署与运行说明
 
+## 第 4 周：数据分析与预测基线
+
+第 4 周交付已形成从模拟遥测、数据清洗、分析绘图、占用预测到管理端展示的完整链路。数据覆盖 14 天、3 个会议室、5 分钟采样间隔，并通过 `data_mode=simulated` 明确标识为教学模拟数据。
+
+在仓库根目录执行：
+
+```powershell
+python -m pip install -r scripts/requirements.txt
+python scripts/run_week4.py
+python -m unittest discover -s tests -p "test_*.py" -v
+cd frontend
+npm run build
+```
+
+结果入口：
+
+- 管理端页面：`/manager/dataAnalysis`
+- 周计划：`docs/week4/week_plan.md`
+- 分析报告：`docs/week4/analysis_report.md`
+- 图表与源表：`docs/week4/figures/`、`docs/week4/results/`
+- 图表口径：`docs/week4/figure_contract.md`
+
 ## 说明
 
 本项目仅用于课程学习、系统开发和功能验证。

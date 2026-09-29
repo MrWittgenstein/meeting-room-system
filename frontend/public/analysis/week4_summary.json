@@ -1,0 +1,140 @@
+{
+  "title": "第 4 周会议室数据分析",
+  "data": {
+    "mode": [
+      "simulated",
+      "unknown"
+    ],
+    "start": "2026-09-15 00:00:00",
+    "end": "2026-09-28 23:55:00",
+    "records": 12096,
+    "rooms": 3,
+    "sampling_minutes": 5,
+    "valid_occupancy_records": 12093,
+    "valid_device_records": 12090
+  },
+  "definitions": {
+    "occupancy_rate": "08:00–22:00 内 occupancy=true 的有效采样数 ÷ occupancy 有效采样数。",
+    "invalid_runtime": "occupancy=false 且灯光、空调或投影至少一项为 true 的有效 5 分钟会议室时段。",
+    "device_invalid_ratio": "某设备在无人时开启的有效分钟数 ÷ 该设备全部开启分钟数。"
+  },
+  "highlights": [
+    {
+      "label": "无效运行峰值",
+      "value": "2026-09-18 10:00",
+      "detail": "该小时累计 95 个会议室分钟存在无人但设备仍开启。"
+    },
+    {
+      "label": "无效运行比例最高设备",
+      "value": "空调",
+      "detail": "无人开启占该设备全部开启时长的 29.7%（4340 分钟）。"
+    },
+    {
+      "label": "占用率峰值",
+      "value": "会议室 14 10:00",
+      "detail": "08:00–22:00 口径下占用率为 100.0%，样本量 n=168。"
+    }
+  ],
+  "device_metrics": [
+    {
+      "device": "lighting_on",
+      "label": "灯光",
+      "valid_samples": 12092,
+      "on_minutes": 12550,
+      "invalid_minutes": 2290,
+      "usage_rate": 0.207575,
+      "invalid_ratio": 0.18247
+    },
+    {
+      "device": "air_conditioner_on",
+      "label": "空调",
+      "valid_samples": 12092,
+      "on_minutes": 14600,
+      "invalid_minutes": 4340,
+      "usage_rate": 0.241482,
+      "invalid_ratio": 0.29726
+    },
+    {
+      "device": "projector_on",
+      "label": "投影",
+      "valid_samples": 12092,
+      "on_minutes": 10910,
+      "invalid_minutes": 650,
+      "usage_rate": 0.18045,
+      "invalid_ratio": 0.059578
+    }
+  ],
+  "figures": [
+    {
+      "title": "无人但设备仍开启的时段分布",
+      "file": "01_invalid_runtime_heatmap.png",
+      "definition": "每个日期和小时内，occupancy=false 且至少一个设备开启的 5 分钟会议室时段累计分钟数。",
+      "conclusion": "峰值出现在 2026-09-18 10:00，累计 95 个会议室分钟。"
+    },
+    {
+      "title": "设备开启与无效运行比例",
+      "file": "02_device_invalid_ratio.png",
+      "definition": "使用率=开启样本数÷有效样本数；无效运行比例=无人时开启分钟数÷全部开启分钟数。",
+      "conclusion": "空调的无效运行比例最高，为 29.7%，对应 4340 分钟。"
+    },
+    {
+      "title": "工作时段各会议室占用率",
+      "file": "03_hourly_occupancy.png",
+      "definition": "08:00–22:00 内按会议室和小时统计，occupancy=true 的采样数÷occupancy 有效采样数。",
+      "conclusion": "最高点为 会议室 14 10:00，占用率 100.0%，n=168。"
+    },
+    {
+      "title": "30 分钟后占用预测混淆矩阵",
+      "file": "04_baseline_confusion_matrix.png",
+      "definition": "测试集按时间后置切分；行是真实占用，列是预测占用，样本限定为 08:00–22:00。",
+      "conclusion": "测试集 n=2016，准确率 97.8%，F1 95.2%。"
+    }
+  ],
+  "limitations": [
+    "当前数据由固定随机种子生成，data_mode=simulated，不能表述为真实传感器实测结论。",
+    "5 分钟采样只支持以 5 分钟为最小单位估计无效运行时长。"
+  ],
+  "baseline": {
+    "model": "会议室×星期×30分钟时段历史占用率（阈值 0.5）",
+    "horizon_minutes": 30,
+    "threshold": 0.5,
+    "train_period": {
+      "start": "2026-09-15",
+      "end": "2026-09-24",
+      "samples": 5040
+    },
+    "test_period": {
+      "start": "2026-09-25",
+      "end": "2026-09-28",
+      "samples": 2016
+    },
+    "metrics": {
+      "samples": 2016,
+      "positive_rate": 0.22321428571428573,
+      "accuracy": 0.9781746031746031,
+      "precision": 0.9393939393939394,
+      "recall": 0.9644444444444444,
+      "specificity": 0.9821200510855683,
+      "f1": 0.9517543859649122,
+      "balanced_accuracy": 0.9732822477650064,
+      "tp": 434,
+      "tn": 1538,
+      "fp": 28,
+      "fn": 16
+    },
+    "comparison": {
+      "samples": 2016,
+      "positive_rate": 0.22321428571428573,
+      "accuracy": 0.8869047619047619,
+      "precision": 0.7466666666666667,
+      "recall": 0.7466666666666667,
+      "specificity": 0.9272030651340997,
+      "f1": 0.7466666666666667,
+      "balanced_accuracy": 0.8369348659003832,
+      "tp": 336,
+      "tn": 1452,
+      "fp": 114,
+      "fn": 114
+    }
+  }
+}

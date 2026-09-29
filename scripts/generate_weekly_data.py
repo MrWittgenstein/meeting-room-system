@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate one deterministic week of simulated smart-room telemetry.
+"""Generate 14 deterministic days of simulated smart-room telemetry.
 
 The data follows the Raspberry Pi/Spring telemetry fields already used by the
 repository. A small, fixed set of malformed records is included so the
@@ -22,7 +22,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "raw" / "原始数据样例.csv"
 START_TIME = datetime(2026, 9, 15, 0, 0)
-DAYS = 7
+DAYS = 14
 INTERVAL_MINUTES = 5
 RANDOM_SEED = 20260915
 
@@ -32,6 +32,7 @@ HEADERS = [
     "Room DB ID",
     "Device ID",
     "Event Type",
+    "Data Mode",
     "Temperature",
     "Humidity",
     "Light Raw",
@@ -40,6 +41,10 @@ HEADERS = [
     "People Count",
     "Door State",
     "Sensor Status",
+    "Lighting On",
+    "Air Conditioner On",
+    "Projector On",
+    "Booking Status",
 ]
 
 ROOMS = [
@@ -74,20 +79,72 @@ ROOMS = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="生成连续一周的会议室模拟监测数据。")
+    parser = argparse.ArgumentParser(description="生成连续 14 天的会议室模拟监测数据。")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="原始 CSV 输出路径")
     return parser.parse_args()
 
 
-def is_occupied(timestamp: datetime, room: dict[str, Any], room_index: int) -> bool:
-    minute_of_day = timestamp.hour * 60 + timestamp.minute
+def booking_windows(timestamp: datetime, room: dict[str, Any], room_index: int) -> tuple[tuple[int, int], ...]:
+    """Return approved booking windows for a room on the requested day."""
     if timestamp.weekday() < 5:
         day_shift = ((timestamp.weekday() + room_index) % 3 - 1) * 10
-        return any(start + day_shift <= minute_of_day < end + day_shift for start, end in room["schedule"])
+        return tuple((start + day_shift, end + day_shift) for start, end in room["schedule"])
 
     weekend_start = 10 * 60 + room_index * 45
     weekend_end = weekend_start + (90 if timestamp.weekday() == 5 else 60)
-    return minute_of_day >= weekend_start and minute_of_day < weekend_end
+    return ((weekend_start, weekend_end),)
+
+
+def is_in_windows(minute_of_day: int, windows: tuple[tuple[int, int], ...], *, before: int = 0, after: int = 0) -> bool:
+    return any(start - before <= minute_of_day < end + after for start, end in windows)
+
+
+def is_occupied(timestamp: datetime, room: dict[str, Any], room_index: int) -> bool:
+    minute_of_day = timestamp.hour * 60 + timestamp.minute
+    windows = booking_windows(timestamp, room, room_index)
+    booked = is_in_windows(minute_of_day, windows)
+
+    # A deterministic no-show creates approved-but-empty periods for analysis.
+    no_show = (
+        booked
+        and timestamp.weekday() < 5
+        and (timestamp.toordinal() + room_index) % 7 == 0
+        and windows[0][0] <= minute_of_day < windows[0][1]
+    )
+    return booked and not no_show
+
+
+def simulated_device_states(
+    timestamp: datetime,
+    room: dict[str, Any],
+    room_index: int,
+    occupied: bool,
+) -> tuple[bool, bool, bool, str]:
+    """Create interpretable device states with scheduled post-meeting overruns."""
+    minute_of_day = timestamp.hour * 60 + timestamp.minute
+    windows = booking_windows(timestamp, room, room_index)
+    booked = is_in_windows(minute_of_day, windows)
+    booking_status = "approved" if booked else "none"
+
+    lighting_on = occupied or is_in_windows(
+        minute_of_day,
+        windows,
+        before=5,
+        after=15 + room_index * 5,
+    )
+    air_conditioner_on = occupied or is_in_windows(
+        minute_of_day,
+        windows,
+        before=15,
+        after=25 + room_index * 10,
+    )
+    projector_tail = 10 if (timestamp.toordinal() + room_index) % 2 == 0 else 0
+    projector_on = occupied or is_in_windows(
+        minute_of_day,
+        windows,
+        after=projector_tail,
+    )
+    return lighting_on, air_conditioner_on, projector_on, booking_status
 
 
 def encode_presence(occupied: bool, sample_index: int, room_index: int) -> str:
@@ -110,6 +167,12 @@ def generate_records() -> list[dict[str, Any]]:
 
         for room_index, room in enumerate(ROOMS):
             occupied = is_occupied(timestamp, room, room_index)
+            lighting_on, air_conditioner_on, projector_on, booking_status = simulated_device_states(
+                timestamp,
+                room,
+                room_index,
+                occupied,
+            )
             people_count = rng.randint(2, room["capacity"] - 1) if occupied else 0
             temperature = room["temperature"] + daily_wave * 1.3 + (0.7 if occupied else 0) + rng.uniform(-0.25, 0.25)
             humidity = room["humidity"] - daily_wave * 2.8 + (1.5 if occupied else 0) + rng.uniform(-0.8, 0.8)
@@ -124,6 +187,7 @@ def generate_records() -> list[dict[str, Any]]:
                 "Room DB ID": room["room_db_id"],
                 "Device ID": room["device_id"],
                 "Event Type": "telemetry",
+                "Data Mode": "simulated",
                 "Temperature": f"{temperature:.1f}",
                 "Humidity": f"{humidity:.1f}",
                 "Light Raw": light_raw,
@@ -132,6 +196,10 @@ def generate_records() -> list[dict[str, Any]]:
                 "People Count": people_count,
                 "Door State": door_state,
                 "Sensor Status": "ok",
+                "Lighting On": encode_presence(lighting_on, sample_index + 1, room_index),
+                "Air Conditioner On": encode_presence(air_conditioner_on, sample_index + 2, room_index),
+                "Projector On": encode_presence(projector_on, sample_index + 3, room_index),
+                "Booking Status": booking_status,
             }
             records.append(record)
             records_by_key[(timestamp, room["room_id"])] = record
@@ -162,16 +230,21 @@ def generate_records() -> list[dict[str, Any]]:
     update("2026-09-16 04:00:00", "meeting_room_14", **{"Device ID": ""})
     update("2026-09-16 04:05:00", "meeting_room_15", **{"Event Type": ""})
     update("2026-09-16 04:10:00", "meeting_room_32", **{"Room DB ID": 999})
+    update("2026-09-16 04:15:00", "meeting_room_14", **{"Data Mode": ""})
+    update("2026-09-16 04:20:00", "meeting_room_15", **{"Lighting On": "unknown"})
+    update("2026-09-16 04:25:00", "meeting_room_32", **{"Air Conditioner On": ""})
+    update("2026-09-16 04:30:00", "meeting_room_14", **{"Projector On": "invalid"})
+    update("2026-09-16 04:35:00", "meeting_room_15", **{"Booking Status": "other"})
     update("2026-09-17 11:00:00", "meeting_room_14", **{"Smoke Raw": 650, "Sensor Status": "warning"})
     update("2026-09-18 16:00:00", "meeting_room_32", **{"Smoke Raw": 950, "Sensor Status": "error"})
 
     # Mandatory-field failures are additional rows so the valid weekly series
     # remains complete after these rows are rejected by the cleaning pipeline.
-    invalid_timestamp = deepcopy(records_by_key[(datetime(2026, 9, 16, 4, 15), "meeting_room_14")])
+    invalid_timestamp = deepcopy(records_by_key[(datetime(2026, 9, 16, 5, 15), "meeting_room_14")])
     invalid_timestamp["Timestamp"] = "not-a-time"
-    missing_timestamp = deepcopy(records_by_key[(datetime(2026, 9, 16, 4, 20), "meeting_room_15")])
+    missing_timestamp = deepcopy(records_by_key[(datetime(2026, 9, 16, 5, 20), "meeting_room_15")])
     missing_timestamp["Timestamp"] = ""
-    invalid_room = deepcopy(records_by_key[(datetime(2026, 9, 16, 4, 25), "meeting_room_32")])
+    invalid_room = deepcopy(records_by_key[(datetime(2026, 9, 16, 5, 25), "meeting_room_32")])
     invalid_room["Room Code"] = "unknown-room"
     records.extend((invalid_timestamp, missing_timestamp, invalid_room))
 

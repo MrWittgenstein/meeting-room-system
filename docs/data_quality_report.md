@@ -5,7 +5,7 @@
 - 原始文件：`data/raw/原始数据样例.csv`
 - 清洗结果：`data/processed/clean_sensor_data.csv`
 - 数据性质：当前没有可导出的真实历史数据，因此本次使用模拟原始数据。
-- 数据周期：2026-09-15 00:00:00 至 2026-09-21 23:55:00，覆盖连续一周。
+- 数据周期：2026-09-15 00:00:00 至 2026-09-28 23:55:00，覆盖连续 14 天。
 - 采样设置：3 个会议室，每 5 分钟生成一条监测记录。
 - 字段来源：本仓库树莓派遥测载荷、后端 `IotTelemetryRequest`、`IotSensorRecord` 和 `iot_sensor_record` 表结构。
 - 模拟数据专门包含重复、缺失、越界值和命名不一致，用于验证清洗流程；不得描述为真实树莓派采集数据。
@@ -14,12 +14,12 @@
 
 | 指标 | 数量 |
 | --- | ---: |
-| 原始记录 | 6053 |
+| 原始记录 | 12101 |
 | 删除的重复记录 | 2 |
 | 因时间或会议室编号无效而删除 | 3 |
-| 清洗后记录 | 6048 |
-| 质量正常记录 | 6031 |
-| 质量异常或不完整记录 | 17 |
+| 清洗后记录 | 12096 |
+| 质量正常记录 | 12074 |
+| 质量异常或不完整记录 | 22 |
 
 ## 字段和格式统一
 
@@ -28,6 +28,9 @@
 - `room-14`、`room_14`、`14`、`Meeting Room 14` 等写法统一为 `meeting_room_14`。
 - 时间统一为 `YYYY-MM-DD HH:MM:SS`，并按时间、会议室和设备升序排列。
 - 原始 `presence` 统一为分析字段 `occupancy`，CSV 使用小写 `true` 或 `false` 表示布尔值。
+- `data_mode` 明确区分 `real` 与 `simulated`；未知来源统一标为 `unknown`，不得并入真实数据结论。
+- 灯光、空调和投影状态统一为 `lighting_on`、`air_conditioner_on`、`projector_on`，使用小写布尔值。
+- 预约状态统一为 `none`、`approved`、`pending`、`rejected`、`cancelled`；非法状态改为 `unknown`。
 - `opened`、`open` 统一为 `open`，`close`、`closed` 统一为 `closed`。
 - `device_id`、`event_type` 和 `sensor_status` 统一为小写。
 
@@ -36,11 +39,16 @@
 | 异常类型 | 发现数量 | 处理方式 |
 | --- | ---: | --- |
 | `humidity_out_of_range` | 1 | 置为空值并标记 abnormal |
+| `invalid_booking_status` | 1 | 改为 unknown 并标记 abnormal |
 | `invalid_door_state` | 1 | 置为空值并标记 abnormal |
+| `invalid_lighting_on` | 1 | 置为空值并标记 abnormal |
 | `invalid_occupancy` | 1 | 置为空值并标记 abnormal |
+| `invalid_projector_on` | 1 | 置为空值并标记 abnormal |
 | `invalid_room_id` | 1 | 会议室编号无法识别，记录不进入清洗结果 |
 | `invalid_timestamp` | 1 | 时间无法转换，记录不进入清洗结果 |
 | `light_raw_out_of_range` | 1 | 置为空值并标记 abnormal |
+| `missing_air_conditioner_on` | 1 | 保留为空值并标记 abnormal |
+| `missing_data_mode` | 1 | 补为 unknown，不能并入真实数据结论 |
 | `missing_device_id` | 1 | 保留为空值并标记 abnormal |
 | `missing_door_state` | 1 | 保留为空值并标记 abnormal |
 | `missing_event_type_filled` | 1 | 补为 telemetry 并标记 abnormal |
@@ -67,6 +75,7 @@
 | `room_db_id` | 0 | 0 |
 | `device_id` | 1 | 1 |
 | `event_type` | 1 | 0 |
+| `data_mode` | 1 | 0 |
 | `temperature` | 1 | 2 |
 | `humidity` | 1 | 2 |
 | `light_raw` | 0 | 1 |
@@ -75,6 +84,10 @@
 | `people_count` | 0 | 1 |
 | `door_state` | 1 | 2 |
 | `sensor_status` | 0 | 0 |
+| `lighting_on` | 0 | 1 |
+| `air_conditioner_on` | 1 | 1 |
+| `projector_on` | 0 | 1 |
+| `booking_status` | 0 | 0 |
 
 处理原则：时间和会议室编号是定位记录所必需的字段，缺失或非法时删除整条记录；温度、湿度、人员状态等传感器字段不凭空填充，保留为空并通过 `quality=abnormal` 和 `quality_issues` 说明原因。源值缺失、格式非法和数值越界分别记录，不重复追加互相矛盾的问题标签。
 
@@ -82,9 +95,9 @@
 
 | 会议室 | 记录数 |
 | --- | ---: |
-| `meeting_room_14` | 2016 |
-| `meeting_room_15` | 2016 |
-| `meeting_room_32` | 2016 |
+| `meeting_room_14` | 4032 |
+| `meeting_room_15` | 4032 |
+| `meeting_room_32` | 4032 |
 
 ## 可复现方式
 
