@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ---- 人脸私有数据：原始照片与人脸特征向量一律禁止入库 ----
+样本集/
+data/dataset/
+data/gallery.json
+data/unknown_faces/
+data/*.csv
+data/eval/*/gallery.json
+
+# 注：data/eval/<运行名>/ 下的 summary.md、per_image.csv、config.json
+# 是评测运行记录，属于报告素材，需要提交，因此不被上面的规则匹配。
+
+# 模型权重不入库，按 models/README.md 自行下载
+models/*.onnx
