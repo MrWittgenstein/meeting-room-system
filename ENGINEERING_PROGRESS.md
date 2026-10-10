@@ -70,6 +70,18 @@
 
 ## 启动和验证
 
+### SkyWalking 链路追踪（可选）
+
+项目提供了可选的 SkyWalking OAP 和 UI 部署文件，以及带 Java Agent 的统一启动脚本：
+
+```powershell
+docker compose -f deploy/skywalking/docker-compose.yml up -d
+.'observability\start-skywalking-services.ps1' `
+  -AgentJar 'D:\tools\skywalking-agent\skywalking-agent.jar'
+```
+
+仪表盘地址为 `http://127.0.0.1:8088`。Agent 不提交到 Git，普通启动命令也不会自动加载 Agent。
+
 从本目录构建。Windows 上打包前停止占用 JAR 的本项目进程，避免重打包文件被锁定。
 
 ```powershell
