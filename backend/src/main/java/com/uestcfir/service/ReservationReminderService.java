@@ -1,6 +1,7 @@
 package com.uestcfir.service;
 
 import com.uestcfir.config.EmailEncryptionService;
+import com.uestcfir.client.NotificationServiceClient;
 import com.uestcfir.enumeration.reservation.ReservationStatus;
 import com.uestcfir.mapper.ReservationMapper;
 import com.uestcfir.mapper.UserMapper;
@@ -36,6 +37,8 @@ public class ReservationReminderService {
     private UserMapper userMapper;
     @Autowired
     private EmailEncryptionService emailEncryptionService;
+    @Autowired
+    private NotificationServiceClient notificationServiceClient;
 
 
 
@@ -47,9 +50,13 @@ public class ReservationReminderService {
         List<Reservations> upcomingReservations = reservationMapper.findUpcomingReservations(now, threshold);
 
         for (Reservations reservation : upcomingReservations) {
+            boolean deliveredRemotely = false;
             try {
-                // 发送WebSocket消息
-                webSocketService.sendMeetingReminder(reservation.getUserId(), reservation);
+                // Notification delivery is owned by notification-service when enabled.
+                deliveredRemotely = notificationServiceClient.sendMeetingReminder(reservation);
+                if (!notificationServiceClient.isEnabled()) {
+                    webSocketService.sendMeetingReminder(reservation.getUserId(), reservation);
+                }
 
                 log.info("成功发送会议提醒: {}", reservation.getReservationId());
 
@@ -58,16 +65,11 @@ public class ReservationReminderService {
             }
             reservation.setStatus(ReservationStatus.USING.getCode()); // 更新状态为正在使用
             reservationMapper.updateReservationStatus(reservation);
-            User user = userMapper.selectByUserId(reservation.getUserId());
-            //解密邮箱
-            String email= emailEncryptionService.decryptEmail(user.getEmail());
-
-            try {
-
+            // The legacy email path is available only for explicitly disabled local runs.
+            if (!notificationServiceClient.isEnabled()) {
+                User user = userMapper.selectByUserId(reservation.getUserId());
+                String email = emailEncryptionService.decryptEmail(user.getEmail());
                 emailSender.sendEmail(email, "会议提醒", "您预约的会议马上开始开始");
-            }
-            catch (Exception e) {
-                throw new RuntimeException("发送邮件失败");
             }
 
         }

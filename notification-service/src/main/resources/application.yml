@@ -1,0 +1,62 @@
+server:
+  address: ${NOTIFICATION_SERVICE_BIND_ADDRESS:127.0.0.1}
+  port: ${NOTIFICATION_SERVICE_PORT:8182}
+
+spring:
+  application:
+    name: meeting-notification-service
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:meeting-room}
+        group: ${NACOS_GROUP:MEETING_ROOM_GROUP}
+        register-enabled: ${NACOS_REGISTER_ENABLED:${NACOS_ENABLED:false}}
+        service: meeting-notification-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${NOTIFICATION_DB_NAME:meetingroom_notifications}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    username: ${NOTIFICATION_DB_USERNAME:root}
+    password: ${NOTIFICATION_DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: ${NOTIFICATION_REDIS_DATABASE:3}
+
+seata:
+  enabled: true
+  application-id: ${spring.application.name}
+  tx-service-group: meeting-room-notification-tx-group
+  enable-auto-data-source-proxy: true
+  data-source-proxy-mode: AT
+  registry:
+    type: file
+  config:
+    type: file
+  service:
+    vgroup-mapping:
+      meeting-room-notification-tx-group: meeting-room-notification
+    grouplist:
+      meeting-room-notification: ${SEATA_SERVER:127.0.0.1:8091}
+
+notification:
+  scheduler:
+    dispatch-delay-ms: 5000
+    policy-delay-ms: 5000
+  clients:
+    user-service-url: ${USER_SERVICE_URL:http://127.0.0.1:8181}
+  features:
+    sms-enabled: true
+    email-enabled: true
+    site-message-enabled: true
+
+management:
+  health:
+    mail:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info

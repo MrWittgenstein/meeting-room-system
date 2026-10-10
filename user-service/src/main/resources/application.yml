@@ -1,0 +1,57 @@
+server:
+  address: ${USER_SERVICE_BIND_ADDRESS:127.0.0.1}
+  port: ${USER_SERVICE_PORT:8181}
+
+spring:
+  application:
+    name: meeting-user-service
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:meeting-room}
+        group: ${NACOS_GROUP:MEETING_ROOM_GROUP}
+        register-enabled: ${NACOS_REGISTER_ENABLED:${NACOS_ENABLED:false}}
+        service: meeting-user-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${USER_DB_NAME:meetingroom_users}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    username: ${USER_DB_USERNAME:root}
+    password: ${USER_DB_PASSWORD:123456}
+
+seata:
+  enabled: true
+  application-id: ${spring.application.name}
+  tx-service-group: meeting-room-user-tx-group
+  enable-auto-data-source-proxy: true
+  data-source-proxy-mode: AT
+  registry:
+    type: file
+  config:
+    type: file
+  service:
+    vgroup-mapping:
+      meeting-room-user-tx-group: meeting-room-user
+    grouplist:
+      meeting-room-user: ${SEATA_SERVER:127.0.0.1:8091}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+user-service:
+  features:
+    password-login-enabled: true
+    code-login-enabled: true
+    oauth-login-enabled: true
+    register-enabled: true
+    password-max-attempts: 5
+    password-lock-minutes: 15
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

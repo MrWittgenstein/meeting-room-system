@@ -4,7 +4,7 @@ app:
 
 server:
   address: ${MEETINGROOM_BIND_ADDRESS:127.0.0.1}
-  port: ${MEETINGROOM_PORT:8081}
+  port: ${MEETINGROOM_PORT:8084}
 
 auth:
   session:
@@ -13,6 +13,18 @@ auth:
 spring:
   application:
     name: meetingroom-main
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:meeting-room}
+        group: ${NACOS_GROUP:MEETING_ROOM_GROUP}
+        register-enabled: ${NACOS_REGISTER_ENABLED:${NACOS_ENABLED:false}}
+        service: ${NACOS_SERVICE_NAME:meetingroom-main}
+        ip: ${NACOS_IP:}
+        heart-beat-interval: 5000
+        heart-beat-timeout: 15000
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -96,3 +108,14 @@ business-cache:
   enabled: ${BUSINESS_CACHE_ENABLED:true}
   room-list-ttl: ${ROOM_LIST_CACHE_TTL:5m}
   telemetry-ttl: ${TELEMETRY_CACHE_TTL:5s}
+
+# External ownership boundaries. Keep disabled during local legacy-only runs;
+# enable after user-management and notification-service are deployed.
+platform-services:
+  enabled: ${PLATFORM_SERVICES_ENABLED:true}
+  discovery-enabled: ${PLATFORM_DISCOVERY_ENABLED:false}
+  internal-token: ${PLATFORM_INTERNAL_TOKEN:}
+  user-service-url: ${USER_SERVICE_URL:http://127.0.0.1:8181}
+  notification-service-url: ${NOTIFICATION_SERVICE_URL:http://127.0.0.1:8182}
+  user-service-name: ${USER_SERVICE_NAME:meeting-user-service}
+  notification-service-name: ${NOTIFICATION_SERVICE_NAME:meeting-notification-service}

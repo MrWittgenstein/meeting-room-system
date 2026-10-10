@@ -36,13 +36,16 @@ public class GatewayRoutesConfiguration {
     @Bean
     public RouteLocator meetingroomRoute(
             RouteLocatorBuilder builder,
-            @Value("${MEETINGROOM_SERVICE_URL:http://127.0.0.1:8081}") String meetingroomUrl,
-            @Value("${MEETINGROOM_WS_URL:ws://127.0.0.1:8081}") String meetingroomWsUrl,
+            @Value("${MEETINGROOM_SERVICE_URL:http://127.0.0.1:8084}") String meetingroomUrl,
+            @Value("${MEETINGROOM_WS_URL:ws://127.0.0.1:8084}") String meetingroomWsUrl,
+            @Value("${GATEWAY_DISCOVERY_ENABLED:false}") boolean discoveryEnabled,
             @Value("${LOG_SERVICE_URL:http://127.0.0.1:8083}") String logUrl) {
+        String meetingroomHttpTarget = discoveryEnabled ? "lb://meetingroom-main" : meetingroomUrl;
+        String meetingroomWebSocketTarget = discoveryEnabled ? "lb:ws://meetingroom-main" : meetingroomWsUrl;
         return builder.routes()
                 .route("log-service", route -> route.path("/api/v1/logs/**").uri(logUrl))
-                .route("meetingroom-device-websocket", route -> route.path("/iot/ws/device").uri(meetingroomWsUrl))
-                .route("meetingroom-service", route -> route.path("/**").uri(meetingroomUrl))
+                .route("meetingroom-device-websocket", route -> route.path("/iot/ws/device").uri(meetingroomWebSocketTarget))
+                .route("meetingroom-service", route -> route.path("/**").uri(meetingroomHttpTarget))
                 .build();
     }
 }
