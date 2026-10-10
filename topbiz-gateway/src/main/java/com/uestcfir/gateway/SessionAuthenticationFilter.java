@@ -70,6 +70,10 @@ public class SessionAuthenticationFilter implements GlobalFilter, Ordered {
                                 headers.set("X-Authenticated-User-Id", session.path("userId").asText());
                                 headers.set("X-Authenticated-Role", session.path("role").asText());
                                 headers.set("X-Authenticated-Permissions", permissions);
+                                // user-service consumes the canonical propagation headers.
+                                headers.set("X-User-Id", session.path("userId").asText());
+                                headers.set("X-User-Role", session.path("role").asText());
+                                headers.set("X-User-Menus", toUserMenus(session));
                             })
                             .build())
                     .build();
@@ -77,6 +81,24 @@ public class SessionAuthenticationFilter implements GlobalFilter, Ordered {
         } catch (Exception exception) {
             return unauthorized(exchange, "Invalid session data");
         }
+    }
+
+    private String toUserMenus(JsonNode session) {
+        java.util.LinkedHashSet<String> menus = new java.util.LinkedHashSet<>();
+        JsonNode permissions = session.path("permissions");
+        if (permissions.isArray()) {
+            permissions.forEach(permission -> menus.add(permission.asText()));
+            if (java.util.stream.StreamSupport.stream(permissions.spliterator(), false)
+                    .anyMatch(permission -> "user:manage".equals(permission.asText()))) {
+                menus.add("menu:user:list");
+                menus.add("menu:user:create");
+                menus.add("menu:user:update");
+                menus.add("menu:user:delete");
+                menus.add("menu:user:resetPassword");
+                menus.add("api:user:lookup");
+            }
+        }
+        return String.join(",", menus);
     }
 
     private String resolveSessionId(ServerWebExchange exchange) {

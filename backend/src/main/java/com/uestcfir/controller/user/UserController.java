@@ -1,6 +1,8 @@
 package com.uestcfir.controller.user;
 
 import com.uestcfir.auth.CurrentUserContext;
+import com.uestcfir.client.UserServiceClient;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.uestcfir.auth.RolePermissionRegistry;
 import com.uestcfir.auth.SessionService;
 import com.uestcfir.auth.SessionUser;
@@ -43,6 +45,7 @@ public class UserController {
     private final OssFileStorageService ossFileStorageService;
     private final EmailEncryptionService emailEncryptionService;
     private final SessionService sessionService;
+    private final UserServiceClient userServiceClient;
 
     @PostMapping("/sendcode")
     public Result sendCode(@RequestParam("email") String email) {
@@ -102,11 +105,35 @@ public class UserController {
     @GetMapping("/info")
     public Result getUserInfo() {
         CurrentUserContext.requirePermission(RolePermissionRegistry.USER_READ_SELF);
+        JsonNode remoteUser = userServiceClient.getCurrentUser();
+        if (remoteUser != null && !remoteUser.isMissingNode() && !remoteUser.isNull()) {
+            UserInfo userInfo = new UserInfo(
+                    parseLegacyId(remoteUser.path("userId").asText()),
+                    textOrNull(remoteUser, "nickname"),
+                    textOrNull(remoteUser, "nickname"),
+                    textOrNull(remoteUser, "email"),
+                    textOrNull(remoteUser, "phone"),
+                    0,
+                    textOrNull(remoteUser, "avatar"));
+            return Result.success(userInfo);
+        }
         User user = userService.getUserInfo(CurrentUserContext.requireUserId());
         String decryptedEmail = emailEncryptionService.decryptEmail(user.getEmail());
         UserInfo userInfo = new UserInfo(user.getUserId(), user.getUsername(), user.getRealName(),
                 decryptedEmail, user.getPhone(), user.getIntegral(), user.getThumbnailUrl());
         return Result.success(userInfo);
+    }
+
+    private static String textOrNull(JsonNode node, String field) {
+        return node.hasNonNull(field) ? node.get(field).asText() : null;
+    }
+
+    private static Integer parseLegacyId(String value) {
+        try {
+            return Integer.valueOf(value);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @PutMapping("/update")

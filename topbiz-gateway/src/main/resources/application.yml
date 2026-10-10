@@ -10,6 +10,14 @@ spring:
       port: ${REDIS_PORT:6379}
       database: ${REDIS_DATABASE:0}
   cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:meeting-room}
+        group: ${NACOS_GROUP:MEETING_ROOM_GROUP}
+        register-enabled: ${NACOS_REGISTER_ENABLED:${NACOS_ENABLED:false}}
+        service: zongshe-topbiz
     gateway:
       server:
         webflux:
@@ -19,6 +27,7 @@ spring:
             response-timeout: 8s
 
 gateway:
+  discovery-enabled: ${GATEWAY_DISCOVERY_ENABLED:false}
   rate-limit:
     login-rps: ${GATEWAY_LOGIN_RPS:5}
     query-rps: ${GATEWAY_QUERY_RPS:20}

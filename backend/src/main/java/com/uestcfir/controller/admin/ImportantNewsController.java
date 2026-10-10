@@ -1,6 +1,7 @@
 package com.uestcfir.controller.admin;
 
 import com.uestcfir.auth.CurrentUserContext;
+import com.uestcfir.client.NotificationServiceClient;
 import com.uestcfir.auth.RolePermissionRegistry;
 import com.uestcfir.pojo.entity.ImageUploadResult;
 import com.uestcfir.pojo.entity.ImportantNews;
@@ -31,13 +32,18 @@ import java.util.List;
 public class ImportantNewsController {
     private final ImportantNewsService importantNewsService;
     private final OssFileStorageService ossFileStorageService;
+    private final NotificationServiceClient notificationServiceClient;
 
     @PostMapping("/add")
     public boolean addImportantNews(@RequestBody ImportantNews importantNews) {
         requireManage();
         importantNews.setPublisherId(CurrentUserContext.requireUserId());
         importantNews.setCreateTime(java.time.LocalDateTime.now());
-        return importantNewsService.addImportantNews(importantNews);
+        boolean saved = importantNewsService.addImportantNews(importantNews);
+        if (saved && "已发布".equals(importantNews.getStatus())) {
+            notificationServiceClient.publishAnnouncement(importantNews, CurrentUserContext.requireUserId());
+        }
+        return saved;
     }
 
     @GetMapping("/all")
