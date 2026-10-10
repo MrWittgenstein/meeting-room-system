@@ -18,18 +18,27 @@ before deploying this setup to a shared or production environment.
 
 ## Download the Java Agent
 
-Download a matching Apache SkyWalking Java Agent release and extract it outside
-the repository. The repository must contain only the startup scripts and
-configuration; do not commit `skywalking-agent.jar` or the extracted agent
-directory.
+Download the Apache SkyWalking Java Agent 9.8.0 release from the
+[official downloads page](https://skywalking.apache.org/downloads/) and extract
+it outside the repository. Java Agent 9.x is compatible with the OAP 10.x used
+here. The repository must contain only the startup scripts and configuration;
+do not commit `skywalking-agent.jar` or the extracted agent directory.
 
 ## Start the Java services with tracing
 
-Build the services first, then run the PowerShell helper:
+From the repository root, build the root modules and the two sibling services:
 
 ```powershell
-.'observability\start-skywalking-services.ps1' `
-  -AgentJar 'D:\tools\skywalking-agent\skywalking-agent.jar'
+mvn -DskipTests package
+mvn -f user-service/pom.xml -DskipTests package
+mvn -f notification-service/pom.xml -DskipTests package
+```
+
+Then run the PowerShell helper, adjusting the Agent path if needed:
+
+```powershell
+.\observability\start-skywalking-services.ps1 `
+  -AgentJar (Join-Path $env:LOCALAPPDATA 'SkyWalking\agent-9.8.0\skywalking-agent\skywalking-agent.jar')
 ```
 
 The helper starts these services with distinct SkyWalking service names:

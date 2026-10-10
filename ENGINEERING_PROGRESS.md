@@ -76,8 +76,8 @@
 
 ```powershell
 docker compose -f deploy/skywalking/docker-compose.yml up -d
-.'observability\start-skywalking-services.ps1' `
-  -AgentJar 'D:\tools\skywalking-agent\skywalking-agent.jar'
+.\observability\start-skywalking-services.ps1 `
+  -AgentJar (Join-Path $env:LOCALAPPDATA 'SkyWalking\agent-9.8.0\skywalking-agent\skywalking-agent.jar')
 ```
 
 仪表盘地址为 `http://127.0.0.1:8088`。Agent 不提交到 Git，普通启动命令也不会自动加载 Agent。
