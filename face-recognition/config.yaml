@@ -1,0 +1,76 @@
+# ============================================================
+# 人脸识别系统配置
+# 所有可调参数集中于此：改进点的开关、阈值、模型路径等。
+# 报告中"改进点对比实验"通过修改此文件或命令行开关完成。
+# ============================================================
+
+model:
+  # 模型文件：见 models/README.md 下载说明
+  detector: "models/face_detection_yunet_2023mar.onnx"
+  embedder: "models/w600k_mbf.onnx"
+  # YuNet 检测参数
+  detect_input_size: [320, 320]     # 检测输入尺寸：小=快，大=小脸更准
+  score_threshold: 0.6              # 检测置信度阈值
+  nms_threshold: 0.3                # 非极大值抑制阈值
+  top_k: 1                          # 每帧最多检测人数（签到场景通常 1 人）
+  # MobileFaceNet 参数
+  embed_input_size: [112, 112]
+  embed_input_norm: -1.0            # 输入归一化：-1=归一化到[-1,1]（insightface 约定）；0=归一化到[0,1]
+
+pipeline:
+  embed_every: 2                    # 【性能改进】每 N 帧执行一次完整流水线，其余帧复用结果
+  threads: 2                        # ONNX Runtime 线程数（树莓派 4B 建议 2-4）
+
+preprocess:                         # 【改进点】输入归一化（enabled=false 可消融对比）
+  enabled: true
+  max_long_side: 1280               # 长边超过此值时等比缩小后再检测，只缩不放
+                                    # 理由：YuNet 锚框尺度与输入分辨率绑定，原图直送会让
+                                    # 置信度虚低、检测框偏小，进而被占比过滤误杀
+
+alignment:                          # 【改进点】关键点对齐的稳健估计（method 可切换做消融）
+  method: "lmeds"                   # lmeds=最小中值，用全部 5 点求解（默认）
+                                    # ransac=OpenCV 默认，需人工阈值，高分辨率照片下会误杀
+  ransac_threshold: 3.0             # 仅 ransac 模式生效：模板坐标系下的重投影阈值
+  min_inliers: 3                    # 仅 ransac 模式生效：内点数下限
+
+detection:
+  enhance:                          # 【改进点】暗光/侧脸检测增强（enabled=false 可消融对比）
+    enabled: true
+    clahe_clip: 2.0                 # CLAHE 对比度增强强度
+    fallback_score_drop: 0.15       # 回退检测器阈值降幅（不低于 0.45）
+    rotation_angles: [-12.0, 12.0]  # 侧脸旋转回退角度
+
+quality_gate:                       # 【改进点】质量评估门控（enabled=false 可消融对比）
+  enabled: true
+  min_blur: 60.0                    # 拉普拉斯方差：低于此值判为模糊
+  min_brightness: 40.0              # 人脸区域平均灰度下限
+  max_brightness: 220.0             # 人脸区域平均灰度上限（防过曝）
+  min_face_ratio: 0.02              # 人脸框占画面最小比例
+                                    # 标定依据：在本组数据集（4 对象 34 张测试样本）上
+                                    # 取 0.05 时准确率 73.5%、拒识 9 张；放宽到 0.02 后
+                                    # 准确率升到 88.2%，救回的 5 张全部识别正确且 FAR 仍为 0；
+                                    # 再往下（<2% 档）仍有 4 张失败，故取 0.02
+
+gallery:
+  path: "data/gallery.json"
+  merge_strategy: "max"             # 每人多向量比对策略：max=取最高相似度
+  adaptive_threshold:               # 【改进点】自适应阈值（按用户注册向量分布个性化）
+    enabled: true
+    k: 2.0                          # threshold = clamp(mean - k*std, global_min, global_max)
+    global_min: 0.35
+    global_max: 0.55
+
+voting:                             # 【改进点】多帧投票（enabled=false 可消融对比）
+  enabled: true
+  window_size: 7                    # 滑动窗口帧数
+  confirm_ratio: 0.7                # 某身份窗口内占比达到该比例才确认
+  reject_threshold: 0.30            # 帧内最高相似度低于此值一律视为陌生人
+
+logging:
+  dir: "data"                       # 事件日志与陌生人截图输出目录
+  unknown_cooldown: 5.0             # 陌生人截图冷却（秒），防止同一人连续截图
+
+backend:                            # 会议室后端对接（iot_reporter.py 使用，以队友新框架实际地址为准）
+  ws_url: "ws://192.168.5.1:8080/ws/iot"   # 后端 WebSocket IoT 端点
+  device_id: "pi4b-face-01"                # 设备编号（后端按此绑定会话并下发命令）
+  room_code: "A101"                        # 会议室编号
