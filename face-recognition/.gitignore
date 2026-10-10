@@ -16,3 +16,7 @@ data/eval/*/gallery.json
 
 # 模型权重不入库，按 models/README.md 自行下载
 models/*.onnx
+
+# 周报属课程内部材料（含卡点、求助事项），不作为仓库公开内容
+docs/07-第5周周报.*
+docs/word/07-第5周周报.docx
