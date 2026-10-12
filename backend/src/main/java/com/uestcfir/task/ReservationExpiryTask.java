@@ -2,10 +2,12 @@ package com.uestcfir.task;
 
 
 import com.uestcfir.mapper.ReservationMapper;
+import com.uestcfir.messaging.MeetingEventPublisher;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,14 +19,23 @@ public class ReservationExpiryTask {
 
     @Autowired
     private ReservationMapper reservationMapper;
+    @Autowired
+    private MeetingEventPublisher meetingEventPublisher;
 
     @XxlJob("reservationExpiryCheck")
+    @Transactional
     public void checkReservationExpiry() {
         log.info("开始检查预约是否过期");
         try {
             LocalTime now = LocalTime.now();
             LocalDate today = LocalDate.now();
+            var expiredReservations = reservationMapper.selectReservationsToExpire(now, today);
              int updatedCount = reservationMapper.updateExpiredReservations(now, today);
+
+            for (var reservation : expiredReservations) {
+                reservation.setStatus(2);
+                meetingEventPublisher.publishReservationExpired(reservation);
+            }
 
             if (updatedCount > 0) {
             log.info("成功标记 {} 个过期预约", updatedCount);

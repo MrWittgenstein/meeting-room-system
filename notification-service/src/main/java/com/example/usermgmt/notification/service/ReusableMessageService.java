@@ -563,6 +563,11 @@ public class ReusableMessageService {
 
     @Transactional
     public MessageDtos.SendResponse sendMessage(MessageDtos.SendRequest request) {
+        return sendMessage(request, false);
+    }
+
+    @Transactional
+    public MessageDtos.SendResponse sendMessage(MessageDtos.SendRequest request, boolean deferDispatch) {
         MessageRequestContext context = buildMessageRequestContext(
             request.getPolicyId(),
             request.getBusinessCode(),
@@ -598,7 +603,7 @@ public class ReusableMessageService {
             plannedAt
         );
 
-        if (!plannedAt.isAfter(LocalDateTime.now())) {
+        if (!deferDispatch && !plannedAt.isAfter(LocalDateTime.now())) {
             dispatchMessageById(messageId);
         }
         return buildSendResponse(messageId);

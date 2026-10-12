@@ -8,6 +8,8 @@ user-service                                     # users, authentication, groups
 notification-service                             # announcements, in-app messages, email, SMS
 ```
 
+跨服务公告和预约事件使用 RabbitMQ 异步投递，通知服务仍通过 HTTP 提供主页查询接口。RabbitMQ 的启动方式见 [`deploy/rabbitmq/README.md`](../deploy/rabbitmq/README.md)。
+
 Default local ports:
 
 ```text

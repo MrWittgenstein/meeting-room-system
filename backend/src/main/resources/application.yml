@@ -13,19 +13,16 @@ auth:
 spring:
   application:
     name: meetingroom-main
-
-xxl:
-  job:
-    enabled: ${XXL_JOB_ENABLED:true}
-    admin:
-      addresses: ${XXL_JOB_ADMIN_ADDRESS:http://127.0.0.1:18080/xxl-job-admin}
-    executor:
-      appname: meetingroom-executor
-      accessToken: ${XXL_JOB_ACCESS_TOKEN:}
-      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
-      port: ${XXL_JOB_EXECUTOR_PORT:9996}
-      logpath: ${XXL_JOB_LOG_PATH:./run-logs/xxl-job}
-      logretentiondays: 14
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
   cloud:
     nacos:
       discovery:
@@ -38,6 +35,7 @@ xxl:
         ip: ${NACOS_IP:}
         heart-beat-interval: 5000
         heart-beat-timeout: 15000
+
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -86,6 +84,32 @@ xxl:
           idleConnectionTimeout: 30000
           connectTimeout: 10000
           timeout: 3000
+
+
+xxl:
+  job:
+    enabled: ${XXL_JOB_ENABLED:true}
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESS:http://127.0.0.1:18080/xxl-job-admin}
+    executor:
+      appname: meetingroom-executor
+      accessToken: ${XXL_JOB_ACCESS_TOKEN:}
+      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
+      port: ${XXL_JOB_EXECUTOR_PORT:9996}
+      logpath: ${XXL_JOB_LOG_PATH:./run-logs/xxl-job}
+      logretentiondays: 14
+
+
+meeting:
+  events:
+    enabled: ${MEETING_EVENTS_ENABLED:true}
+    exchange: ${MEETING_EVENTS_EXCHANGE:meeting.events}
+    queue: ${MEETING_EVENTS_QUEUE:meeting.notification.events}
+    dead-letter-exchange: ${MEETING_EVENTS_DLX:meeting.events.dlx}
+    dead-letter-queue: ${MEETING_EVENTS_DLQ:meeting.notification.events.dlq}
+    dead-letter-routing-key: ${MEETING_EVENTS_DLQ_ROUTING_KEY:notification.failed}
+    listener-prefetch: ${MEETING_EVENTS_LISTENER_PREFETCH:20}
+    listener-max-attempts: ${MEETING_EVENTS_LISTENER_MAX_ATTEMPTS:3}
 
 
 aliyun:

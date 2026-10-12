@@ -94,6 +94,10 @@ docker compose -f deploy/xxl-job/docker-compose.yml up -d
 
 管理端默认地址为 `http://127.0.0.1:18080/xxl-job-admin`。服务执行器默认使用 `host.docker.internal` 注册地址，适配服务直接运行在宿主机、调度中心运行在 Docker 的场景。任务首次导入时处于停止状态，需要在管理端启动；完整的环境变量、端口和处理器列表见 [`deploy/xxl-job/README.md`](deploy/xxl-job/README.md)。
 
+### RabbitMQ 业务事件
+
+公告发布和预约创建、审批、拒绝、取消、过期、提醒已通过 RabbitMQ 事件异步进入消息通告服务。会议室服务先把事件写入本地 `meeting_event_outbox`，再由 `meetingEventOutboxDispatch` 投递；通知服务用 `consumed_meeting_event` 做幂等消费，继续写入原有 `message` 表。主页仍通过通知服务 HTTP 接口读取消息，RabbitMQ 不参与前端查询。
+
 从本目录构建。Windows 上打包前停止占用 JAR 的本项目进程，避免重打包文件被锁定。
 
 ```powershell

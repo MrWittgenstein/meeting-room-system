@@ -32,6 +32,8 @@ VALUES
     (107, 12, '消息派发', NOW(), NOW(), 'meeting-room', '', 'CRON', '0/5 * * * * ?',
      'DO_NOTHING', 'FIRST', 'notificationMessageDispatch', '', 'SERIAL_EXECUTION', 0, 1, 'BEAN', '', '初始化', NOW(), ''),
     (108, 12, '通知策略派发', NOW(), NOW(), 'meeting-room', '', 'CRON', '0/5 * * * * ?',
-     'DO_NOTHING', 'FIRST', 'notificationPolicyDispatch', '', 'SERIAL_EXECUTION', 0, 1, 'BEAN', '', '初始化', NOW(), '');
+     'DO_NOTHING', 'FIRST', 'notificationPolicyDispatch', '', 'SERIAL_EXECUTION', 0, 1, 'BEAN', '', '初始化', NOW(), ''),
+    (109, 10, '会议事件 Outbox 投递', NOW(), NOW(), 'meeting-room', '', 'CRON', '0/5 * * * * ?',
+     'DO_NOTHING', 'FIRST', 'meetingEventOutboxDispatch', '', 'SERIAL_EXECUTION', 0, 1, 'BEAN', '', '初始化', NOW(), '');
 
 COMMIT;

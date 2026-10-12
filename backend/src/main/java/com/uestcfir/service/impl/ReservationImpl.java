@@ -8,6 +8,7 @@ import com.uestcfir.pojo.dto.ReservationDto;
 import com.uestcfir.pojo.entity.Reservations;
 import com.uestcfir.pojo.entity.Result;
 import com.uestcfir.pojo.entity.User;
+import com.uestcfir.messaging.MeetingEventPublisher;
 import com.uestcfir.service.MeetroomService;
 import com.uestcfir.service.ReservationService;
 import jakarta.servlet.http.PushBuilder;
@@ -51,6 +52,8 @@ public class ReservationImpl implements ReservationService {
     private static final String BOOKING_PREFIX = "reservation:";
     @Autowired
     private MeetroomService meetroomService;
+    @Autowired
+    private MeetingEventPublisher meetingEventPublisher;
 
 
     /**
@@ -123,6 +126,7 @@ public class ReservationImpl implements ReservationService {
             );
 
             if (reservationMapper.insertReservation(reservation)) {
+                meetingEventPublisher.publishReservationCreated(reservation);
                 return Result.success();
             }
             throw new BusinessException("预定插入失败");
@@ -180,10 +184,19 @@ public class ReservationImpl implements ReservationService {
      * @param userId 用户ID
      * @return 操作结果
      */
+    @Transactional
     public Result approveReservation(ApproveDto approveDto, Integer userId) {
         try{
         approveDto.setApproveTime(LocalDateTime.now());
         reservationMapper.approveReservation(approveDto,userId);
+        Reservations reservation = reservationMapper.selectByReservationId(approveDto.getReservationId());
+        if (reservation != null) {
+            if (Integer.valueOf(4).equals(approveDto.getApproveStatus())) {
+                meetingEventPublisher.publishReservationApproved(reservation);
+            } else if (Integer.valueOf(5).equals(approveDto.getApproveStatus()) || Integer.valueOf(1).equals(approveDto.getApproveStatus())) {
+                meetingEventPublisher.publishReservationRejected(reservation);
+            }
+        }
         return Result.success();}
         catch (Exception e){
             log.error("审批预定失败: {}", e.getMessage());
@@ -243,10 +256,15 @@ public class ReservationImpl implements ReservationService {
      * @param userId 用户ID
      * @return 操作结果
      */
+    @Transactional
     public Result cancelReservation(Integer reservationId, Integer userId) {
         log.info("Cancelling reservation: {}", reservationId);
         try {
+            Reservations reservation = reservationMapper.selectByReservationId(reservationId);
             if (reservationMapper.cancelReservation(reservationId,userId)) {
+                if (reservation != null) {
+                    meetingEventPublisher.publishReservationCancelled(reservation);
+                }
                 return Result.success();
             }
             throw new BusinessException("预定取消失败，未找到预约");

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,6 +36,7 @@ public class ImportantNewsController {
     private final NotificationServiceClient notificationServiceClient;
 
     @PostMapping("/add")
+    @Transactional
     public boolean addImportantNews(@RequestBody ImportantNews importantNews) {
         requireManage();
         importantNews.setPublisherId(CurrentUserContext.requireUserId());

@@ -19,7 +19,7 @@
     </resultMap>
 
     <!-- 插入重要事件 -->
-    <insert id="insertImportantNews" parameterType="com.uestcfir.pojo.entity.ImportantNews">
+    <insert id="insertImportantNews" parameterType="com.uestcfir.pojo.entity.ImportantNews" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO importantnews
         (title, content, related_room_id, news_type, start_time, end_time, severity, status, publisher_id, publisher_name, create_time)
         VALUES

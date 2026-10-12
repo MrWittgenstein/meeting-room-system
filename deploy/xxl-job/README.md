@@ -1,6 +1,6 @@
 # XXL-JOB 调度中心
 
-会议室服务、用户服务和消息通告服务的定时任务统一由 XXL-JOB Admin 调度，服务本身只保留 `@XxlJob` 处理器。
+会议室服务、用户服务和消息通告服务的定时任务统一由 XXL-JOB Admin 调度，服务本身只保留 `@XxlJob` 处理器。跨服务通知事件通过 RabbitMQ 投递，会议室服务的 Outbox 投递任务也由 XXL-JOB 调度。
 
 ## 启动
 
@@ -30,7 +30,7 @@ docker compose -f deploy/xxl-job/docker-compose.yml up -d
 
 ## 已初始化任务
 
-`mysql/01-schema.sql` 使用官方 XXL-JOB 3.4.2 表结构，`mysql/02-project-jobs.sql` 删除示例任务并初始化本项目的 8 个处理器。任务首次导入时为停止状态，需要在管理端为对应任务点击“启动”：
+`mysql/01-schema.sql` 使用官方 XXL-JOB 3.4.2 表结构，`mysql/02-project-jobs.sql` 删除示例任务并初始化本项目的 9 个处理器。任务首次导入时为停止状态，需要在管理端为对应任务点击“启动”：
 
 - `reservationExpiryCheck`
 - `expiredReservationCleanup`
@@ -40,6 +40,7 @@ docker compose -f deploy/xxl-job/docker-compose.yml up -d
 - `temporaryMemberCleanup`
 - `notificationMessageDispatch`
 - `notificationPolicyDispatch`
+- `meetingEventOutboxDispatch`
 
 初始化脚本只会在 MySQL 数据卷第一次创建时自动执行。已经存在 `xxl-job-mysql-data` 数据卷时，修改脚本不会覆盖已有数据，需要按变更内容在 XXL-JOB 数据库中手动执行。
 

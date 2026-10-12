@@ -18,6 +18,16 @@ xxl:
 spring:
   application:
     name: meeting-notification-service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
   cloud:
     nacos:
       discovery:
@@ -64,6 +74,17 @@ notification:
     sms-enabled: true
     email-enabled: true
     site-message-enabled: true
+
+meeting:
+  events:
+    enabled: ${MEETING_EVENTS_ENABLED:true}
+    exchange: ${MEETING_EVENTS_EXCHANGE:meeting.events}
+    queue: ${MEETING_EVENTS_QUEUE:meeting.notification.events}
+    dead-letter-exchange: ${MEETING_EVENTS_DLX:meeting.events.dlx}
+    dead-letter-queue: ${MEETING_EVENTS_DLQ:meeting.notification.events.dlq}
+    dead-letter-routing-key: ${MEETING_EVENTS_DLQ_ROUTING_KEY:notification.failed}
+    listener-prefetch: ${MEETING_EVENTS_LISTENER_PREFETCH:20}
+    listener-max-attempts: ${MEETING_EVENTS_LISTENER_MAX_ATTEMPTS:3}
 
 management:
   health:

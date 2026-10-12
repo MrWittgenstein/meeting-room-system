@@ -53,7 +53,7 @@ public class SiteMessageServiceImpl implements SiteMessageService {
             sendRequest.setRecipient(recipient);
             sendRequest.setChannel("in_app");
             sendRequest.setParams(buildMessageParams(request));
-            reusableMessageService.sendMessage(sendRequest);
+            reusableMessageService.sendMessage(sendRequest, request.isDeferDispatch());
             successCount += 1;
         }
         return successCount;
