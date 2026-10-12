@@ -82,6 +82,18 @@ docker compose -f deploy/skywalking/docker-compose.yml up -d
 
 仪表盘地址为 `http://127.0.0.1:8088`。Agent 不提交到 Git，普通启动命令也不会自动加载 Agent。
 
+### XXL-JOB 定时任务调度
+
+会议室服务、用户服务和消息通告服务的定时任务已统一迁移到 XXL-JOB 3.4.2。服务中的 `@Scheduled` 和 `@EnableScheduling` 已移除，任务方法改为 `@XxlJob` 处理器，并分别注册为 `meetingroom-executor`、`meeting-user-executor` 和 `meeting-notification-executor`。
+
+XXL-JOB Admin、MySQL 8.0 和项目任务初始化脚本位于 `deploy/xxl-job`。启动前设置 `XXL_JOB_MYSQL_ROOT_PASSWORD`、`XXL_JOB_ACCESS_TOKEN`，再执行：
+
+```powershell
+docker compose -f deploy/xxl-job/docker-compose.yml up -d
+```
+
+管理端默认地址为 `http://127.0.0.1:18080/xxl-job-admin`。服务执行器默认使用 `host.docker.internal` 注册地址，适配服务直接运行在宿主机、调度中心运行在 Docker 的场景。任务首次导入时处于停止状态，需要在管理端启动；完整的环境变量、端口和处理器列表见 [`deploy/xxl-job/README.md`](deploy/xxl-job/README.md)。
+
 从本目录构建。Windows 上打包前停止占用 JAR 的本项目进程，避免重打包文件被锁定。
 
 ```powershell

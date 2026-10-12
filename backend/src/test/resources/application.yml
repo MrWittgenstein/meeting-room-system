@@ -6,6 +6,10 @@ auth:
   session:
     ttl: 30m
 
+xxl:
+  job:
+    enabled: false
+
 spring:
   flyway:
     enabled: true

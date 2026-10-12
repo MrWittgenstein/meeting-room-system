@@ -13,6 +13,19 @@ auth:
 spring:
   application:
     name: meetingroom-main
+
+xxl:
+  job:
+    enabled: ${XXL_JOB_ENABLED:true}
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESS:http://127.0.0.1:18080/xxl-job-admin}
+    executor:
+      appname: meetingroom-executor
+      accessToken: ${XXL_JOB_ACCESS_TOKEN:}
+      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
+      port: ${XXL_JOB_EXECUTOR_PORT:9996}
+      logpath: ${XXL_JOB_LOG_PATH:./run-logs/xxl-job}
+      logretentiondays: 14
   cloud:
     nacos:
       discovery:

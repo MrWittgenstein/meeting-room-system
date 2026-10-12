@@ -13,6 +13,10 @@
     <artifactId>notification-service</artifactId>
     <name>notification-service</name>
 
+    <properties>
+        <xxl-job.version>3.4.2</xxl-job.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
@@ -50,6 +54,11 @@
         <dependency>
             <groupId>io.seata</groupId>
             <artifactId>seata-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.xuxueli</groupId>
+            <artifactId>xxl-job-core</artifactId>
+            <version>${xxl-job.version}</version>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>
