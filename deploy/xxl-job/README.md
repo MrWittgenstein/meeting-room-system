@@ -44,4 +44,6 @@ docker compose -f deploy/xxl-job/docker-compose.yml up -d
 
 初始化脚本只会在 MySQL 数据卷第一次创建时自动执行。已经存在 `xxl-job-mysql-data` 数据卷时，修改脚本不会覆盖已有数据，需要按变更内容在 XXL-JOB 数据库中手动执行。
 
+如果之前已经部署过调度中心，请先在 `xxl_job` 库执行 `mysql/03-rabbitmq-outbox-job.sql`，再在管理端启动 `meetingEventOutboxDispatch`。
+
 官方项目文档和版本说明见 [XXL-JOB GitHub](https://github.com/xuxueli/xxl-job)。

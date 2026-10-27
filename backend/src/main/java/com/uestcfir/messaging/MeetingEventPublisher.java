@@ -75,6 +75,7 @@ public class MeetingEventPublisher {
 
     private Map<String, Object> reservationPayload(Reservations reservation) {
         Map<String, Object> payload = new LinkedHashMap<>();
+        Map<String, Object> params = new LinkedHashMap<>();
         payload.put("reservationId", reservation.getReservationId());
         payload.put("legacyUserId", reservation.getUserId());
         payload.put("roomId", reservation.getRoomId());
@@ -85,6 +86,14 @@ public class MeetingEventPublisher {
         payload.put("status", reservation.getStatus());
         payload.put("purpose", reservation.getPurpose());
         payload.put("rejectReason", reservation.getRejectReason());
+        params.put("reservationId", reservation.getReservationId());
+        params.put("roomId", reservation.getRoomId());
+        params.put("reserveDate", reservation.getReserveDate());
+        params.put("startTime", reservation.getStartTime());
+        params.put("endTime", reservation.getEndTime());
+        params.put("purpose", reservation.getPurpose());
+        params.put("rejectReason", reservation.getRejectReason());
+        payload.put("params", params);
         return payload;
     }
 

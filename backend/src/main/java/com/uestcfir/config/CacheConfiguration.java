@@ -6,6 +6,7 @@ import com.uestcfir.pojo.entity.IotRoomStatus;
 import com.uestcfir.pojo.entity.IotSensorRecord;
 import com.uestcfir.pojo.entity.Meetingroom;
 import com.uestcfir.pojo.vo.IotTelemetryVo;
+import com.uestcfir.cache.TwoLevelCacheManager;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
@@ -35,13 +36,14 @@ public class CacheConfiguration implements CachingConfigurer {
     public CacheManager cacheManager(RedisConnectionFactory factory, ObjectMapper mapper,
             @Value("${business-cache.enabled:true}") boolean enabled,
             @Value("${business-cache.room-list-ttl:5m}") Duration roomTtl,
-            @Value("${business-cache.telemetry-ttl:5s}") Duration telemetryTtl) {
+            @Value("${business-cache.telemetry-ttl:5s}") Duration telemetryTtl,
+            @Value("${business-cache.l1-max-size:10000}") long l1MaxSize) {
         if (!enabled) return new NoOpCacheManager();
         if (roomTtl.isZero() || roomTtl.isNegative() || telemetryTtl.isZero() || telemetryTtl.isNegative()) {
             throw new IllegalArgumentException("Business cache TTLs must be positive");
         }
         var recordConfig = configuration(mapper, mapper.constructType(IotSensorRecord.class), telemetryTtl);
-        return RedisCacheManager.builder(RedisCacheWriter.nonLockingRedisCacheWriter(factory, BatchStrategies.scan(500)))
+        RedisCacheManager redisManager = RedisCacheManager.builder(RedisCacheWriter.nonLockingRedisCacheWriter(factory, BatchStrategies.scan(500)))
                 .withInitialCacheConfigurations(Map.of(
                         "meetingroom:list", configuration(mapper, mapper.getTypeFactory().constructCollectionType(List.class, Meetingroom.class), roomTtl),
                         "iot:latest-room", recordConfig,
@@ -50,6 +52,16 @@ public class CacheConfiguration implements CachingConfigurer {
                                 mapper.getTypeFactory().constructCollectionType(List.class, IotTelemetryVo.class), telemetryTtl),
                         "iot:room-status", configuration(mapper, mapper.constructType(IotRoomStatus.class), telemetryTtl)))
                 .disableCreateOnMissingCache().build();
+        if (l1MaxSize < 1) {
+            throw new IllegalArgumentException("business-cache.l1-max-size must be positive");
+        }
+        return new TwoLevelCacheManager(redisManager, Map.of(
+                "meetingroom:list", roomTtl,
+                "iot:latest-room", telemetryTtl,
+                "iot:latest-device", telemetryTtl,
+                "iot:recent-room", telemetryTtl,
+                "iot:room-status", telemetryTtl),
+                l1MaxSize);
     }
 
     private RedisCacheConfiguration configuration(ObjectMapper mapper, JavaType type, Duration ttl) {

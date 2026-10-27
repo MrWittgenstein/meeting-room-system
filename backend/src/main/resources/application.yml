@@ -111,6 +111,12 @@ meeting:
     listener-prefetch: ${MEETING_EVENTS_LISTENER_PREFETCH:20}
     listener-max-attempts: ${MEETING_EVENTS_LISTENER_MAX_ATTEMPTS:3}
 
+cache:
+  invalidation:
+    enabled: ${CACHE_INVALIDATION_ENABLED:true}
+    exchange: ${CACHE_INVALIDATION_EXCHANGE:cache.invalidation}
+    queue: ${CACHE_INVALIDATION_QUEUE:}
+
 
 aliyun:
   oss:
@@ -143,6 +149,7 @@ iot:
 
 business-cache:
   enabled: ${BUSINESS_CACHE_ENABLED:true}
+  l1-max-size: ${BUSINESS_CACHE_L1_MAX_SIZE:10000}
   room-list-ttl: ${ROOM_LIST_CACHE_TTL:5m}
   telemetry-ttl: ${TELEMETRY_CACHE_TTL:5s}
 

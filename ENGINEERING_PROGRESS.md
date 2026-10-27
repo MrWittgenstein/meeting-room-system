@@ -98,6 +98,10 @@ docker compose -f deploy/xxl-job/docker-compose.yml up -d
 
 公告发布和预约创建、审批、拒绝、取消、过期、提醒已通过 RabbitMQ 事件异步进入消息通告服务。会议室服务先把事件写入本地 `meeting_event_outbox`，再由 `meetingEventOutboxDispatch` 投递；通知服务用 `consumed_meeting_event` 做幂等消费，继续写入原有 `message` 表。主页仍通过通知服务 HTTP 接口读取消息，RabbitMQ 不参与前端查询。
 
+### Caffeine + Redis + Canal 缓存一致性
+
+业务缓存采用 Caffeine L1、Redis L2 的两级结构，查询先读本机 Caffeine，未命中再读 Redis，写入和回源结果会填充两级缓存。MySQL Binlog 由 `cache-invalidation-service` 通过 Canal 监听，变更事件发布到 RabbitMQ `cache.invalidation`；每个会议室服务实例拥有独立临时队列，消费后同时删除本机 Caffeine 和 Redis 对应条目。会议室列表、IoT 最新值、IoT 房间状态和近期列表均有对应失效映射，部署方式见 [`deploy/canal/README.md`](deploy/canal/README.md)。
+
 从本目录构建。Windows 上打包前停止占用 JAR 的本项目进程，避免重打包文件被锁定。
 
 ```powershell

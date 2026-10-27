@@ -2,6 +2,7 @@ package com.uestcfir.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uestcfir.config.CacheConfiguration;
+import com.uestcfir.cache.TwoLevelCacheManager;
 import com.uestcfir.pojo.entity.IotRoomStatus;
 import com.uestcfir.pojo.entity.IotSensorRecord;
 import com.uestcfir.pojo.entity.Meetingroom;
@@ -33,7 +34,7 @@ class BusinessCacheTest {
         when(factory.getConnection()).thenReturn(mock(RedisConnection.class));
         var configuration = new CacheConfiguration();
         CacheManager manager = configuration.cacheManager(factory, new ObjectMapper(), true,
-                Duration.ofMinutes(5), Duration.ofSeconds(5));
+                Duration.ofMinutes(5), Duration.ofSeconds(5), 10_000);
         ((org.springframework.beans.factory.InitializingBean) manager).afterPropertiesSet();
         assertNotNull(manager.getCache("meetingroom:list"));
         assertNotNull(manager.getCache("iot:latest-room"));
@@ -41,14 +42,14 @@ class BusinessCacheTest {
         assertNotNull(manager.getCache("iot:room-status"));
         assertNotNull(manager.getCache("iot:recent-room"));
         assertNull(manager.getCache("unconfigured"));
-        var redisManager = (org.springframework.data.redis.cache.RedisCacheManager) manager;
+        var redisManager = (org.springframework.data.redis.cache.RedisCacheManager) ((TwoLevelCacheManager) manager).getL2Manager();
         assertFalse(redisManager.getCacheConfigurations().get("meetingroom:list").getAllowCacheNullValues());
         assertEquals(Duration.ofMinutes(5), redisManager.getCacheConfigurations().get("meetingroom:list").getTtl());
         assertEquals(Duration.ofSeconds(5), redisManager.getCacheConfigurations().get("iot:latest-room").getTtl());
         assertInstanceOf(org.springframework.cache.support.NoOpCacheManager.class,
-                configuration.cacheManager(factory, new ObjectMapper(), false, Duration.ofMinutes(5), Duration.ofSeconds(5)));
+                configuration.cacheManager(factory, new ObjectMapper(), false, Duration.ofMinutes(5), Duration.ofSeconds(5), 10_000));
         assertThrows(IllegalArgumentException.class, () -> configuration.cacheManager(factory, new ObjectMapper(), true,
-                Duration.ZERO, Duration.ofSeconds(5)));
+                Duration.ZERO, Duration.ofSeconds(5), 10_000));
     }
 
     @Test
@@ -111,13 +112,14 @@ class BusinessCacheTest {
     }
 
     @Test
-    void redisCacheRoundTripsTypedValuesAndUsesConfiguredExpiry() {
+    void redisCacheRoundTripsTypedValuesAndUsesConfiguredExpiry() throws Exception {
         var factory = new org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory("127.0.0.1", 6379);
         factory.afterPropertiesSet();
         try {
             var configuration = new CacheConfiguration();
-            var manager = (org.springframework.data.redis.cache.RedisCacheManager) configuration.cacheManager(
-                    factory, new ObjectMapper().findAndRegisterModules(), true, Duration.ofMinutes(5), Duration.ofSeconds(5));
+            var manager = (TwoLevelCacheManager) configuration.cacheManager(
+                    factory, new ObjectMapper().findAndRegisterModules(), true, Duration.ofMinutes(5), Duration.ofSeconds(5), 10_000);
+            var redisManager = (org.springframework.data.redis.cache.RedisCacheManager) manager.getL2Manager();
             manager.afterPropertiesSet();
             Cache cache = manager.getCache("iot:latest-room");
             Integer roomId = UUID.randomUUID().hashCode();

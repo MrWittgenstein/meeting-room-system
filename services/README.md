@@ -10,6 +10,8 @@ notification-service                             # announcements, in-app message
 
 跨服务公告和预约事件使用 RabbitMQ 异步投递，通知服务仍通过 HTTP 提供主页查询接口。RabbitMQ 的启动方式见 [`deploy/rabbitmq/README.md`](../deploy/rabbitmq/README.md)。
 
+业务缓存使用 Caffeine L1 + Redis L2。MySQL Binlog 由 Canal 监听，`cache-invalidation-service` 将变更转为 RabbitMQ 缓存失效广播；部署说明见 [`deploy/canal/README.md`](../deploy/canal/README.md)。
+
 Default local ports:
 
 ```text
