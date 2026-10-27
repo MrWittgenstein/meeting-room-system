@@ -8,9 +8,9 @@ import com.uestcfir.mapper.UserMapper;
 import com.uestcfir.pojo.entity.Reservations;
 import com.uestcfir.pojo.entity.User;
 import com.uestcfir.websocket.WebSocketServer;
+import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -42,7 +42,7 @@ public class ReservationReminderService {
 
 
 
-    @Scheduled(fixedRate = 60000) // 每分钟执行一次
+    @XxlJob("reservationReminderDispatch")
     public void checkUpcomingReservations() {
         LocalTime now = LocalTime.now();
         LocalTime threshold = now.plusMinutes(15); // 检查未来15分钟内的预约

@@ -23,4 +23,5 @@ public class SiteMessageSendRequest {
     private String creatorId;
     private String templateCode;
     private JsonNode params;
+    private boolean deferDispatch;
 }

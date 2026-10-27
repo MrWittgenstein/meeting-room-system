@@ -167,6 +167,20 @@ public class NotificationSchemaInitializer {
               KEY `idx_message_business` (`business_type`, `channel_code`),
               KEY `idx_message_recipient` (`recipient_type`, `recipient_value`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表'
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS `consumed_meeting_event` (
+              `event_id` VARCHAR(64) NOT NULL,
+              `event_type` VARCHAR(100) NOT NULL,
+              `status` VARCHAR(20) NOT NULL DEFAULT 'PROCESSING',
+              `attempts` INT NOT NULL DEFAULT 0,
+              `last_error` VARCHAR(1000) DEFAULT NULL,
+              `processed_time` DATETIME DEFAULT NULL,
+              `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`event_id`),
+              KEY `idx_consumed_event_status` (`status`, `update_time`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会议事件消费幂等表'
             """
         );
 

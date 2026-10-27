@@ -25,7 +25,11 @@ public interface ReservationMapper {
      * @return
      */
     @Insert("insert into reservations(type,room_name,location,user_id,approver_id,room_id,reserve_date,start_time,end_time,status,username,purpose,approve_time,reject_reason,cancel_reason,create_time,update_time) values(#{type},#{roomName},#{location},#{userId},#{approverId},#{roomId},#{reserveDate},#{startTime},#{endTime},#{status},#{username},#{purpose},#{approveTime},#{rejectReason},#{cancelReason},#{createTime},#{updateTime})")
+    @Options(useGeneratedKeys = true, keyProperty = "reservationId", keyColumn = "reservation_id")
     boolean insertReservation(Reservations reservation);
+
+    @Select("select * from reservations where reservation_id = #{reservationId}")
+    Reservations selectByReservationId(Integer reservationId);
 
 
     /**
@@ -44,6 +48,9 @@ public interface ReservationMapper {
             "AND ((reserve_date < #{date}) OR (reserve_date = #{date} AND end_time < #{now})) " +
             "AND end_time IS NOT NULL")
     int updateExpiredReservations(@Param("now") LocalTime now, @Param("date") LocalDate date);
+
+    @Select("SELECT * FROM reservations WHERE status IN (0,3,4) AND ((reserve_date < #{date}) OR (reserve_date = #{date} AND end_time < #{now})) AND end_time IS NOT NULL")
+    List<Reservations> selectReservationsToExpire(@Param("now") LocalTime now, @Param("date") LocalDate date);
 
     //TODO: 删除的status可能需要修改
 

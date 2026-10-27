@@ -6,6 +6,14 @@ auth:
   session:
     ttl: 30m
 
+xxl:
+  job:
+    enabled: false
+
+meeting:
+  events:
+    enabled: false
+
 spring:
   flyway:
     enabled: true

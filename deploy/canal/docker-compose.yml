@@ -1,0 +1,21 @@
+services:
+  canal-server:
+    image: canal/canal-server:v1.1.8
+    container_name: meeting-room-canal
+    restart: unless-stopped
+    environment:
+      canal.auto.scan: "false"
+      canal.destinations: meetingroom
+      canal.instance.master.address: host.docker.internal:3306
+      canal.instance.dbUsername: ${CANAL_DB_USERNAME:?Set CANAL_DB_USERNAME before starting}
+      canal.instance.dbPassword: ${CANAL_DB_PASSWORD:?Set CANAL_DB_PASSWORD before starting}
+      canal.instance.connectionCharset: UTF-8
+      canal.instance.tsdb.enable: "true"
+      canal.instance.gtidon: "false"
+      canal.instance.filter.regex: "meetingroom\\..*"
+      canal.instance.parser.parallel: "true"
+      canal.instance.parser.parallelThreadSize: "4"
+    ports:
+      - "11111:11111"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

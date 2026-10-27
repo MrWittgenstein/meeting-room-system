@@ -7,6 +7,7 @@ import com.example.usermgmt.notification.dto.ChannelDtos;
 import com.example.usermgmt.notification.dto.MessageDtos;
 import com.example.usermgmt.notification.dto.PolicyDtos;
 import com.example.usermgmt.notification.dto.TemplateDtos;
+import com.xxl.job.core.handler.annotation.XxlJob;
 import com.example.usermgmt.notification.util.TemplateRenderEngine;
 import com.example.usermgmt.notification.util.TemplateRenderEngine.RenderedContent;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -43,7 +44,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -563,6 +563,11 @@ public class ReusableMessageService {
 
     @Transactional
     public MessageDtos.SendResponse sendMessage(MessageDtos.SendRequest request) {
+        return sendMessage(request, false);
+    }
+
+    @Transactional
+    public MessageDtos.SendResponse sendMessage(MessageDtos.SendRequest request, boolean deferDispatch) {
         MessageRequestContext context = buildMessageRequestContext(
             request.getPolicyId(),
             request.getBusinessCode(),
@@ -598,7 +603,7 @@ public class ReusableMessageService {
             plannedAt
         );
 
-        if (!plannedAt.isAfter(LocalDateTime.now())) {
+        if (!deferDispatch && !plannedAt.isAfter(LocalDateTime.now())) {
             dispatchMessageById(messageId);
         }
         return buildSendResponse(messageId);
@@ -786,7 +791,7 @@ public class ReusableMessageService {
         return response;
     }
 
-    @Scheduled(fixedDelayString = "${notification.scheduler.dispatch-delay-ms:30000}")
+    @XxlJob("notificationMessageDispatch")
     @Transactional
     public void dispatchDueMessages() {
         List<String> dueMessageIds = jdbcTemplate.query(
@@ -808,7 +813,7 @@ public class ReusableMessageService {
         }
     }
 
-    @Scheduled(fixedDelayString = "${notification.scheduler.policy-delay-ms:60000}")
+    @XxlJob("notificationPolicyDispatch")
     @Transactional
     public void dispatchDuePolicies() {
         List<PolicyDtos.Record> policies = jdbcTemplate.query(

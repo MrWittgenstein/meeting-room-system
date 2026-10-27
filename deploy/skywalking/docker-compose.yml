@@ -1,0 +1,21 @@
+services:
+  oap:
+    image: apache/skywalking-oap-server:10.1.0
+    container_name: meeting-room-skywalking-oap
+    restart: unless-stopped
+    environment:
+      SW_STORAGE: h2
+    ports:
+      - "11800:11800"
+      - "12800:12800"
+
+  ui:
+    image: apache/skywalking-ui:10.1.0
+    container_name: meeting-room-skywalking-ui
+    restart: unless-stopped
+    depends_on:
+      - oap
+    environment:
+      SW_OAP_ADDRESS: http://oap:12800
+    ports:
+      - "8088:8080"

@@ -2,9 +2,9 @@ package com.uestcfir.service;
 
 import com.uestcfir.mapper.ReservationMapper;
 import com.uestcfir.pojo.entity.Reservations;
+import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -19,9 +19,9 @@ public class ReservationStateScheduleService {
     private ReservationMapper reservationMapper;
 
     /**
-     * 自动更新预约状态 - 项目启动后立即执行，然后每1分钟执行一次
+     * 由 XXL-JOB 调度，更新预约状态。
      */
-    @Scheduled(initialDelay = 5000, fixedRate = 60000)
+    @XxlJob("reservationStateUpdate")
     public void autoUpdateReservationStates() {
         log.info("开始自动更新预约状态...");
 
@@ -43,7 +43,8 @@ public class ReservationStateScheduleService {
             log.info("自动更新完成，更新了 {} 条过期预约状态，更新了 {} 条记录", expiredUpdated,updatedCount);
 
         } catch (Exception e) {
-            log.error("自动更新预约状态失败: {}", e.getMessage());
+            log.error("自动更新预约状态失败: {}", e.getMessage(), e);
+            throw new IllegalStateException("更新预约状态失败", e);
         }
     }
 

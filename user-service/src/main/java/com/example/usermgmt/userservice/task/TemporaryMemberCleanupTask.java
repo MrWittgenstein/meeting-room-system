@@ -3,11 +3,11 @@ package com.example.usermgmt.userservice.task;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.usermgmt.userservice.entity.UserGroupEntity;
 import com.example.usermgmt.userservice.mapper.UserGroupMapper;
+import com.xxl.job.core.handler.annotation.XxlJob;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,7 +16,7 @@ public class TemporaryMemberCleanupTask {
 
     private final UserGroupMapper userGroupMapper;
 
-    @Scheduled(cron = "0 0 * * * *")
+    @XxlJob("temporaryMemberCleanup")
     public void cleanupExpiredTemporaryMembers() {
         List<UserGroupEntity> temporaryMembers = userGroupMapper.selectList(
             new QueryWrapper<UserGroupEntity>().eq("type", "temporary")

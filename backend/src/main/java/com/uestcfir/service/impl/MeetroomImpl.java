@@ -170,6 +170,7 @@ public class MeetroomImpl implements MeetroomService {
      * @return 会议室列表
      */
     @Cacheable(cacheNames = "meetingroom:list", key = "#p0 + ':' + #p1",
+            sync = true,
             condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public List<Meetingroom> getAllMeetingroomList(Integer page, Integer size) {
         log.info("Getting all meetrooms");

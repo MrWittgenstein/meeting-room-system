@@ -86,7 +86,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
-    @Cacheable(cacheNames = "iot:latest-room", key = "#p0", condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
+    @Cacheable(cacheNames = "iot:latest-room", key = "#p0", sync = true, condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public IotSensorRecord getLatestByRoomId(Integer roomId) {
         validateRoomId(roomId);
         IotSensorRecord record = iotSensorRecordMapper.findLatestByRoomId(roomId);
@@ -97,7 +97,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
-    @Cacheable(cacheNames = "iot:recent-room", key = "#p0 + ':' + (#p1 == null ? 20 : (#p1 < 1 ? 1 : (#p1 > 200 ? 200 : #p1)))",
+    @Cacheable(cacheNames = "iot:recent-room", key = "#p0 + ':' + (#p1 == null ? 20 : (#p1 < 1 ? 1 : (#p1 > 200 ? 200 : #p1)))", sync = true,
             condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public List<IotSensorRecord> getRecentByRoomId(Integer roomId, Integer limit) {
         validateRoomId(roomId);
@@ -106,7 +106,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
-    @Cacheable(cacheNames = "iot:latest-device", key = "#p0.trim()", condition = "#p0 != null && !#p0.isBlank() && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
+    @Cacheable(cacheNames = "iot:latest-device", key = "#p0.trim()", sync = true, condition = "#p0 != null && !#p0.isBlank() && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public IotSensorRecord getLatestByDeviceId(String deviceId) {
         if (StringUtils.isBlank(deviceId)) {
             throw new BusinessException("deviceId can not be empty");
@@ -119,7 +119,7 @@ public class IotTelemetryServiceImpl implements IotTelemetryService {
     }
 
     @Override
-    @Cacheable(cacheNames = "iot:room-status", key = "#p0", condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
+    @Cacheable(cacheNames = "iot:room-status", key = "#p0", sync = true, condition = "#p0 != null && !T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()")
     public IotRoomStatus getRoomStatus(Integer roomId) {
         validateRoomId(roomId);
         IotRoomStatus roomStatus = iotRoomStatusMapper.findByRoomId(roomId);

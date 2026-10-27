@@ -2,11 +2,12 @@ package com.uestcfir.task;
 
 
 import com.uestcfir.mapper.ReservationMapper;
+import com.uestcfir.messaging.MeetingEventPublisher;
+import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.expression.DateTimeLiteralExpression;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,25 +19,35 @@ public class ReservationExpiryTask {
 
     @Autowired
     private ReservationMapper reservationMapper;
+    @Autowired
+    private MeetingEventPublisher meetingEventPublisher;
 
-    @Scheduled(initialDelay = 1000,fixedRate = 600000)//每十分钟执行一次
+    @XxlJob("reservationExpiryCheck")
+    @Transactional
     public void checkReservationExpiry() {
         log.info("开始检查预约是否过期");
         try {
             LocalTime now = LocalTime.now();
             LocalDate today = LocalDate.now();
+            var expiredReservations = reservationMapper.selectReservationsToExpire(now, today);
              int updatedCount = reservationMapper.updateExpiredReservations(now, today);
+
+            for (var reservation : expiredReservations) {
+                reservation.setStatus(2);
+                meetingEventPublisher.publishReservationExpired(reservation);
+            }
 
             if (updatedCount > 0) {
             log.info("成功标记 {} 个过期预约", updatedCount);
          }
     } catch (Exception e) {
         log.error("检查过期预约时发生错误", e);
+        throw new IllegalStateException("检查过期预约失败", e);
     }
 
     }
 
-    @Scheduled(cron = "0 0 * * * ?")//每小时执行一次，cron表达式
+    @XxlJob("expiredReservationCleanup")
     public void cleanupExpiredReservations() {
         try {
             LocalDateTime deadline = LocalDateTime.now().minusDays(10);//10天前的日期,保留十天内的预约
@@ -46,6 +57,7 @@ public class ReservationExpiryTask {
             }
         } catch (Exception e) {
             log.error("清理过期预约时发生错误", e);
+            throw new IllegalStateException("清理过期预约失败", e);
         }
     }
 }

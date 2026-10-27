@@ -70,6 +70,38 @@
 
 ## 启动和验证
 
+### SkyWalking 链路追踪（可选）
+
+项目提供了可选的 SkyWalking OAP 和 UI 部署文件，以及带 Java Agent 的统一启动脚本：
+
+```powershell
+docker compose -f deploy/skywalking/docker-compose.yml up -d
+.\observability\start-skywalking-services.ps1 `
+  -AgentJar (Join-Path $env:LOCALAPPDATA 'SkyWalking\agent-9.8.0\skywalking-agent\skywalking-agent.jar')
+```
+
+仪表盘地址为 `http://127.0.0.1:8088`。Agent 不提交到 Git，普通启动命令也不会自动加载 Agent。
+
+### XXL-JOB 定时任务调度
+
+会议室服务、用户服务和消息通告服务的定时任务已统一迁移到 XXL-JOB 3.4.2。服务中的 `@Scheduled` 和 `@EnableScheduling` 已移除，任务方法改为 `@XxlJob` 处理器，并分别注册为 `meetingroom-executor`、`meeting-user-executor` 和 `meeting-notification-executor`。
+
+XXL-JOB Admin、MySQL 8.0 和项目任务初始化脚本位于 `deploy/xxl-job`。启动前设置 `XXL_JOB_MYSQL_ROOT_PASSWORD`、`XXL_JOB_ACCESS_TOKEN`，再执行：
+
+```powershell
+docker compose -f deploy/xxl-job/docker-compose.yml up -d
+```
+
+管理端默认地址为 `http://127.0.0.1:18080/xxl-job-admin`。服务执行器默认使用 `host.docker.internal` 注册地址，适配服务直接运行在宿主机、调度中心运行在 Docker 的场景。任务首次导入时处于停止状态，需要在管理端启动；完整的环境变量、端口和处理器列表见 [`deploy/xxl-job/README.md`](deploy/xxl-job/README.md)。
+
+### RabbitMQ 业务事件
+
+公告发布和预约创建、审批、拒绝、取消、过期、提醒已通过 RabbitMQ 事件异步进入消息通告服务。会议室服务先把事件写入本地 `meeting_event_outbox`，再由 `meetingEventOutboxDispatch` 投递；通知服务用 `consumed_meeting_event` 做幂等消费，继续写入原有 `message` 表。主页仍通过通知服务 HTTP 接口读取消息，RabbitMQ 不参与前端查询。
+
+### Caffeine + Redis + Canal 缓存一致性
+
+业务缓存采用 Caffeine L1、Redis L2 的两级结构，查询先读本机 Caffeine，未命中再读 Redis，写入和回源结果会填充两级缓存。MySQL Binlog 由 `cache-invalidation-service` 通过 Canal 监听，变更事件发布到 RabbitMQ `cache.invalidation`；每个会议室服务实例拥有独立临时队列，消费后同时删除本机 Caffeine 和 Redis 对应条目。会议室列表、IoT 最新值、IoT 房间状态和近期列表均有对应失效映射，部署方式见 [`deploy/canal/README.md`](deploy/canal/README.md)。
+
 从本目录构建。Windows 上打包前停止占用 JAR 的本项目进程，避免重打包文件被锁定。
 
 ```powershell
