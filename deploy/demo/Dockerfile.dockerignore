@@ -1,0 +1,16 @@
+**
+!backend/
+!backend/pom.xml
+!backend/src/
+!backend/src/**
+backend/src/test/
+backend/src/main/resources/application.yml
+!frontend/
+!frontend/**
+frontend/node_modules/
+frontend/dist/
+frontend/.env*
+!deploy/
+!deploy/demo/
+!deploy/demo/application.yml
+!deploy/demo/nginx.conf

@@ -1,0 +1,61 @@
+name: meeting-room-demo
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: demo-local-root
+      MYSQL_DATABASE: meetingroom_demo
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo-local-db
+      TZ: Asia/Shanghai
+    volumes:
+      - demo-db:/var/lib/mysql
+      - ./deploy/demo/init.sql:/docker-entrypoint-initdb.d/01-demo.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h127.0.0.1 -u$$MYSQL_USER $$MYSQL_DATABASE -e 'SELECT 1 FROM meetingroom LIMIT 1' >/dev/null"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  api:
+    environment:
+      TZ: Asia/Shanghai
+    build:
+      context: .
+      dockerfile: deploy/demo/Dockerfile
+      target: api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8084;
+          printf 'GET /v3/api-docs/swagger-config HTTP/1.0\r\n\r\n' >&3;
+          read -r status <&3; [[ "$$status" == *' 200 '* ]]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  web:
+    build:
+      context: .
+      dockerfile: deploy/demo/Dockerfile
+      target: web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${DEMO_PORT:-5173}:80"
+volumes:
+  demo-db:
