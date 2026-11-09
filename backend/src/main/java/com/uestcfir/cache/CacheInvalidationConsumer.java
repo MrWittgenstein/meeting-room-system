@@ -17,6 +17,28 @@ public class CacheInvalidationConsumer {
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
 
+    /** Exclusive queues disappear on broker restart. Drop entries cached while
+     * disconnected whenever this subscriber starts (including recovery). */
+    @org.springframework.context.event.EventListener
+    public void subscriberStarted(org.springframework.amqp.rabbit.listener.AsyncConsumerStartedEvent event) {
+        if (event.getSource() instanceof org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer container
+                && java.util.Arrays.stream(container.getQueueNames()).anyMatch(name -> name.equals(queue.getName()))) {
+            resetCaches();
+        }
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("cacheInvalidationQueue")
+    private org.springframework.amqp.core.Queue queue;
+
+    public void resetCaches() {
+        for (String name : cacheManager.getCacheNames()) {
+            var cache = cacheManager.getCache(name);
+            if (cache != null) cache.clear();
+        }
+        log.info("Cache invalidation subscriber started; cleared caches after connection recovery");
+    }
+
     @RabbitListener(queues = "#{@cacheInvalidationQueue.name}")
     public void consume(Message message) throws Exception {
         CacheInvalidationEvent event = objectMapper.readValue(message.getBody(), CacheInvalidationEvent.class);

@@ -1,0 +1,17 @@
+services:
+  seata:
+    image: seataio/seata-server:2.0.0
+    container_name: meeting-room-seata
+    restart: unless-stopped
+    environment:
+      SEATA_IP: ${SEATA_ADVERTISED_HOST:-host.docker.internal}
+      SEATA_PORT: 8091
+      STORE_MODE: file
+    ports:
+      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:7091:7091"
+    volumes:
+      - seata-data:/seata-server/sessionStore
+
+volumes:
+  seata-data:

@@ -7,6 +7,9 @@ import com.uestcfir.mapper.UserMapper;
 import com.uestcfir.pojo.entity.User;
 import com.uestcfir.service.UserAdminService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import com.uestcfir.pojo.vo.AdminUserView;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class UserAdminServiceImpl implements UserAdminService {
     private final EmailEncryptionService encryptionService;
@@ -24,12 +28,12 @@ public class UserAdminServiceImpl implements UserAdminService {
 
     @Override
     public User getUserById(Integer id) {
-        return userMapper.selectUserById(id);
+        return display(userMapper.selectUserById(id));
     }
 
     @Override
     public List<User> getAllUsers() {
-        return userMapper.selectUsersWithPage(null, 0, 1000);
+        return userMapper.selectUsersWithPage(null, 0, 1000).stream().map(this::display).toList();
     }
 
     @Override
@@ -58,6 +62,8 @@ public class UserAdminServiceImpl implements UserAdminService {
     @Override
     @Transactional
     public boolean updateUser(User user) {
+        if (user.getPassword() != null && user.getPassword().isBlank()) user.setPassword(null);
+        if (user.getEmail() != null && user.getEmail().isBlank()) user.setEmail(null);
         if (user.getEmail() != null && !user.getEmail().isBlank()) {
             user.setEmailHash(encryptionService.computeEmailHash(user.getEmail()));
             user.setEmail(encryptionService.encryptEmail(user.getEmail()));
@@ -79,12 +85,30 @@ public class UserAdminServiceImpl implements UserAdminService {
 
     @Override
     public User getUserByUsername(String username) {
-        return userMapper.selectByUsername(username);
+        return display(userMapper.selectByUsername(username));
     }
 
     @Override
     public List<User> getUsersByType(Integer userType) {
-        return userMapper.selectByUserType(userType);
+        return userMapper.selectByUserType(userType).stream().map(this::display).toList();
+    }
+
+    private User display(User user) {
+        if (user == null) return null;
+        AdminUserView view = new AdminUserView();
+        BeanUtils.copyProperties(user, view);
+        view.setPassword(null);
+        view.setEmailHash(null);
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            try {
+                view.setEmail(encryptionService.decryptEmail(user.getEmail()));
+            } catch (RuntimeException exception) {
+                view.setEmail(null);
+                view.setEmailUnavailable(true);
+                log.warn("Historical email unavailable in admin view, userId={}", user.getUserId());
+            }
+        }
+        return view;
     }
 
     public boolean checkUsernameExists(String username) {

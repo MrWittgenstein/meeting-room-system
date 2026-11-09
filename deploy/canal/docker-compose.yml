@@ -3,6 +3,9 @@ services:
     image: canal/canal-server:v1.1.8
     container_name: meeting-room-canal
     restart: unless-stopped
+    command: ["/bin/bash", "/opt/meetingroom/start-canal.sh"]
+    volumes:
+      - ./start-canal.sh:/opt/meetingroom/start-canal.sh:ro
     environment:
       canal.auto.scan: "false"
       canal.destinations: meetingroom
@@ -10,9 +13,9 @@ services:
       canal.instance.dbUsername: ${CANAL_DB_USERNAME:?Set CANAL_DB_USERNAME before starting}
       canal.instance.dbPassword: ${CANAL_DB_PASSWORD:?Set CANAL_DB_PASSWORD before starting}
       canal.instance.connectionCharset: UTF-8
-      canal.instance.tsdb.enable: "true"
+      canal.instance.tsdb.enable: "${CANAL_TSDB_ENABLED:-true}"
       canal.instance.gtidon: "false"
-      canal.instance.filter.regex: "meetingroom\\..*"
+      canal.instance.filter.regex: "${CANAL_FILTER_REGEX:-meetingroom\\..*}"
       canal.instance.parser.parallel: "true"
       canal.instance.parser.parallelThreadSize: "4"
     ports:

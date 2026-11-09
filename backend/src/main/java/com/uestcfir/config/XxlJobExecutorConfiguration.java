@@ -15,6 +15,7 @@ public class XxlJobExecutorConfiguration {
             @Value("${xxl.job.executor.appname}") String appName,
             @Value("${xxl.job.executor.accessToken:}") String accessToken,
             @Value("${xxl.job.executor.ip:}") String ip,
+            @Value("${xxl.job.executor.address:}") String address,
             @Value("${xxl.job.executor.port:9999}") int port,
             @Value("${xxl.job.executor.logpath:./run-logs/xxl-job}") String logPath,
             @Value("${xxl.job.executor.logretentiondays:14}") int logRetentionDays) {
@@ -23,6 +24,12 @@ public class XxlJobExecutorConfiguration {
         executor.setAppname(appName);
         executor.setAccessToken(accessToken);
         executor.setIp(ip);
+        if (address != null && !address.isBlank()) {
+            executor.setAddress(address);
+        } else if ("host.docker.internal".equals(ip)) {
+            // XXL's IP validator drops host names; advertise a full address.
+            executor.setAddress("http://host.docker.internal:" + port + "/");
+        }
         executor.setPort(port);
         executor.setLogPath(logPath);
         executor.setLogRetentionDays(logRetentionDays);

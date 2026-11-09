@@ -33,6 +33,10 @@
         <h2 class="form-title">欢迎回来</h2>
         <p class="form-subtitle">请输入您的邮箱和密码</p>
 
+        <el-alert v-if="pendingDestination" title="账号已验证，页面加载或会话校验暂未完成，可直接重试进入。" type="warning" :closable="false" show-icon style="margin-bottom: 16px">
+          <el-button link type="primary" :loading="isLoading" @click="retryEntry">重试进入</el-button>
+        </el-alert>
+
         <el-form
           ref="loginFormRef"
           :model="loginForm"
@@ -227,15 +231,14 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'LoginPage' })
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 // 引入API接口
 import { registerEmailCodeAPI, registerAPI } from '@/apis/registerAPI.js'
 import {
-  loginEmailCodeAPI,
   passwordLoginAPI,
-  emailLoginAPI,
   changePasswordAPI,
   forgotPasswordCodeAPI  // 引入忘记密码验证码接口
 } from '@/apis/loginAPI.js'
@@ -246,6 +249,30 @@ const router = useRouter()
 // 状态变量
 const isLogin = ref(true)
 const isLoading = ref(false)
+const pendingDestination = ref('')
+
+const enterDestination = async path => {
+  pendingDestination.value = path
+  const failure = await router.push(path)
+  if (failure) return
+  pendingDestination.value = ''
+  ElMessage.success('登录成功')
+}
+
+const retryEntry = async () => {
+  if (isLoading.value || !pendingDestination.value) return
+  isLoading.value = true
+  try {
+    if (!localStorage.getItem('sessionId') && !localStorage.getItem('token')) {
+      pendingDestination.value = ''
+      ElMessage.warning('会话已过期，请重新登录')
+      return
+    }
+    await enterDestination(pendingDestination.value)
+  } catch {
+    ElMessage.error('页面暂时无法加载，请再次重试')
+  } finally { isLoading.value = false }
+}
 const rememberMe = ref(true)
 const forgotPasswordVisible = ref(false)
 const isSendingCode = ref(false)
@@ -382,6 +409,7 @@ const switchToRegister = () => {
 
 // 处理登录
 const handleLogin = async () => {
+  if (isLoading.value) return
   try {
     isLoading.value = true
     // 先验证表单
@@ -397,7 +425,6 @@ const handleLogin = async () => {
 
     // 检查后端返回的成功标识
     if (res.data.code === 1 && res.data.message === 'success') {
-      ElMessage.success('登录成功')
       const { token, sessionId, userType, role } = res.data.data;
       const activeSessionId = sessionId || token;
 
@@ -410,11 +437,12 @@ const handleLogin = async () => {
       localStorage.setItem('userInfo', JSON.stringify(res.data.data));
 
       // 根据用户类型跳转
-      if (['会议室管理员', '超级管理员'].includes(userType)
-        || ['room_admin', 'super_admin'].includes(role)) {
-        await router.push('/manager')
+      if (role === 'super_admin' || (!role && userType === '超级管理员')) {
+        await enterDestination('/system-admin')
+      } else if (role === 'room_admin' || (!role && userType === '会议室管理员')) {
+        await enterDestination('/manager')
       } else if (userType === '普通用户') {
-        await router.push('/user/home')
+        await enterDestination('/user/home')
       } else {
         // 未知用户类型处理
         await router.push('/')
@@ -665,8 +693,6 @@ const createBackgroundParticles = () => {
   if (!container) return;
 
   const particleCount = 25;
-  const containerWidth = window.innerWidth;
-  const containerHeight = window.innerHeight;
 
   for (let i = 0; i < particleCount; i++) {
     const particle = document.createElement('div');

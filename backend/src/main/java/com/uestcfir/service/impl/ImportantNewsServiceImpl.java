@@ -34,7 +34,13 @@ public class ImportantNewsServiceImpl implements ImportantNewsService {
 
         // 设置默认值
         if (importantNews.getStatus() == null) {
-            importantNews.setStatus("未发布");
+            importantNews.setStatus("未过期");
+        }
+        if ("已发布".equals(importantNews.getStatus())) {
+            importantNews.setStatus("未过期");
+        }
+        if (!"未过期".equals(importantNews.getStatus()) && !"已过期".equals(importantNews.getStatus())) {
+            throw new BusinessException(400, "公告状态必须为未过期或已过期");
         }
         if (importantNews.getSeverity() == null) {
             importantNews.setSeverity("中");

@@ -20,6 +20,8 @@ docker compose -f deploy/xxl-job/docker-compose.yml up -d
 
 三个服务默认连接 `http://127.0.0.1:18080/xxl-job-admin`，并使用环境变量 `XXL_JOB_ACCESS_TOKEN`。服务直接运行在宿主机时，执行器注册地址默认是 `host.docker.internal`，这样 Docker 中的 Admin 可以回调宿主机执行器；服务运行在容器中时，请将 `XXL_JOB_EXECUTOR_IP` 改为容器网络中可访问的地址。
 
+XXL-JOB 的 IP 校验会忽略主机名，因此本项目在 IP 为 `host.docker.internal` 时显式设置完整注册地址 `http://host.docker.internal:端口/`，避免自动挑选外网网卡。也可通过 `xxl.job.executor.address` 覆盖完整地址。Admin 3.4.2 的表单登录接口为 `/auth/doLogin`，界面登录入口为 `/auth/login`；与旧版本的 `/login` 不同。
+
 | 服务 | 执行器 AppName | 默认端口 |
 | --- | --- | --- |
 | 会议室服务 | `meetingroom-executor` | `9996` |

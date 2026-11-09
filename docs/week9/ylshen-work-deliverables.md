@@ -2,6 +2,8 @@
 
 > 本文按实际完成的工作项整理，不按周次分组。课程第 9—11 周要求仅用作工程化异常处理、功能集成和测试闭环的检查参考。
 
+> 2026-11-09 已补充真实中间件集成测试与故障恢复，最新结论及实现修复见 [中间件集成验证记录](../integration-test-status.md)。历史测试条目仅代表当时范围。
+
 ## 工作范围
 
 | 工作项 | 主要交付 | 代码/文档证据 |
@@ -230,7 +232,7 @@ sequenceDiagram
 
 **需求与价值**：公告发布、预约提交/审批/拒绝/取消/过期和提醒要进入用户消息列表；避免会议室服务同步等待通知服务，并降低服务短暂不可用导致的漏通知。
 
-**实现**：预约生命周期事件在会议室业务事务内写入 `meeting_event_outbox`；公告发布也在保存公告的事务中调用 Outbox 写入，然后由 XXL-JOB 投递 RabbitMQ；通知服务按 `eventId` 幂等消费并写入原有 `message` 表。消费异常回滚幂等记录，由监听器重试，耗尽后进入死信队列。通知服务提供 HTTP 消息列表和已读接口；现有前端公告列表仍调用会议室服务的公告接口，两者是不同的数据入口。注意：公告适配器会捕获并记录 Outbox 写入异常后返回，可能使公告事务继续提交，因此公告数据与 Outbox 并非严格原子保证；预约事件异常则由业务事务向外传播。
+**实现**：预约生命周期事件和公告在业务事务内写 `meeting_event_outbox`，由 XXL-JOB 投递 RabbitMQ；通知服务按 `eventId` 幂等消费并写 `message`。消费异常回滚并有限重试，耗尽后进入死信。通知服务提供 HTTP 站内信列表与已读接口，前端公告页仍使用会议室公告接口。2026-11-09 修复公告事件异常被吞、状态枚举不匹配及直连用户服务错误，已通过真实业务 API 到通知库及 HTTP 查询的测试。
 
 **验收标准**：公告与预约生命周期事件能生成对应用户消息；重复投递不重复写入；故障恢复后可重新投递；通知服务 HTTP 接口可查询站内信及已读状态。当前前端公告列表并未接入该站内信接口。
 
@@ -249,7 +251,7 @@ sequenceDiagram
     participant UI as 站内信 API 调用方
     B->>B: 公告/预约业务变更
     B->>DB: 预约事务写 PENDING 事件
-    Note over B,DB: 公告也尝试同事务写入，但适配器会吞掉异常，存在公告已提交而无 Outbox 的边界
+    Note over B,DB: 公告和预约在业务事务内写入，Outbox 写入异常向外传播
     J->>DB: 读取待投递/超时占用事件并认领
     J->>Q: 按 eventType 发布并等待 Publisher Confirm
     alt 发布确认且路由成功
@@ -295,7 +297,7 @@ Outbox 的 `event_id` 主键保证每个事件有稳定身份；`status`、`atte
 - `cache-invalidation-service` 使用 Canal 1.1.8 客户端读取 `meetingroom.*` Binlog 并向 `cache.invalidation` RabbitMQ exchange 发布事件。
 - 每个会议室服务实例创建独立临时队列，避免多实例竞争消费导致其他实例未清本地缓存。
 
-**测试/限制**：后端打包、Canal 服务打包、`BusinessCacheTest` 6 项和 Canal Compose 配置检查通过。Canal/MySQL/RabbitMQ/至少两个业务实例尚未进行真实环境联调；需补充断线重连、Binlog 重放、发布确认和多实例失效的现场证据。当前方案实现中 Canal 发布后 ACK 的故障边界、实例离线期间临时队列无法留存事件等限制见下方流程说明。
+**测试/限制**：后端、Canal 服务构建及缓存测试通过；2026-11-09 在两个隔离业务实例中实际验证 MySQL Binlog、Rabbit 广播、Redis 删除及两实例本地缓存刷新，并完成 Canal/Rabbit 重启恢复。仍需长时稳定性和真实多机验收，实测范围见集成记录。
 
 ### 缓存读取与失效流程
 
@@ -325,7 +327,7 @@ sequenceDiagram
 
 MySQL ROW Binlog 由 Canal Server 提供给 `cache-invalidation-service`。服务订阅 `meetingroom.*`，取得行变更后映射为缓存名和 key，再发布 `cache.invalidation`。`meetingroom` 变更清空房间列表；`iot_sensor_record`、`iot_room_status`、`iot_device` 变更按 room/device 删除最新值和状态缓存，并清空近期列表。会议室服务每个实例使用独占、自动删除且随机命名的临时队列；所有队列都绑定同一 Topic Exchange，因此各实例都收到广播并清本机 L1，同时删除共享 L2。使用普通竞争消费者队列会导致只有一个实例清除其 L1，所以这里按实例单独建队列。
 
-当前 Canal 消费循环在连接失败后等待 5 秒再连接，获取一批消息后调用 RabbitTemplate 发布该批所有失效事件，调用完成后 ACK Canal；处理异常则 rollback 当前 Canal batch。当前失效发布没有等待 Rabbit Publisher Confirm，因此 Rabbit 连接在发布调用返回后立即失效时，可能出现 Canal 已 ACK 但 Rabbit 未真正接收的窗口；这不是原子事务，需通过真实部署压测和重启测试确认。失效队列本身是临时队列，服务实例离线期间不会保留广播；靠 TTL 限制陈旧时间是兜底，不等同于离线实例恢复后补收所有事件。此限制应纳入最终验收记录。
+Canal 连接失败后等待 5 秒重连，每批失效发布等待 Rabbit Publisher Confirm 并检查未路由返回，成功后 ACK Canal；异常 rollback 当前批次。临时队列离线期间不保存广播，因此本实例订阅启动/恢复时清空缓存，避免漏事件后继续使用旧值。2026-11-09 故障复测通过；数据库提交到广播处理之间仍存在最终一致性窗口，TTL 保留兜底。
 
 数据库变更到多实例缓存清理是独立于普通读取的异步链路：
 
@@ -353,8 +355,9 @@ sequenceDiagram
     Q1->>L2: 删除/清理 Redis 条目
     QN->>L1: 清理其他实例 Caffeine
     QN->>L2: 删除/清理 Redis 条目
-    CI->>CS: 发布调用完成后 ACK Canal 批次
-    Note over CI,MQ: 发布未等待 Publisher Confirm；失败窗口见正文
+    MQ-->>CI: Publisher Confirm 且没有未路由返回
+    CI->>CS: 确认后 ACK Canal 批次
+    Note over Q1,QN: 订阅启动或恢复时，各实例清空缓存
 ```
 
 **主要位置**：`backend/src/main/java/com/uestcfir/cache/`、`backend/src/main/java/com/uestcfir/config/CacheConfiguration.java`、`cache-invalidation-service/`、`deploy/canal/`。
@@ -399,4 +402,4 @@ sequenceDiagram
 - Canal 缓存失效：`deploy/canal/README.md`
 - SkyWalking：`deploy/skywalking/README.md`
 
-本文按工作项整理，不代表所有集成组件已完成部署验收。本次文档扩写尚未提交到 Git；工作区另有 `frontend/package-lock.json` 的既有未提交变更。
+本文按工作项整理，不代表所有集成组件已完成部署验收；各项最新验证范围及运行限制见集成测试记录。
