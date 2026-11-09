@@ -5,7 +5,7 @@ import lombok.Data;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -20,10 +20,11 @@ public class RedissonLockConfig {
 
 
     @Bean
-    public RedissonClient redissonClient() {
+    public RedissonClient redissonClient(
+            @Value("${reservation.redis-address:redis://127.0.0.1:6379}") String redisAddress) {
         Config config = new Config();
         config.useSingleServer()
-                .setAddress("redis://127.0.0.1:6379")
+                .setAddress(redisAddress)
                 .setDatabase(0)
                 .setConnectionMinimumIdleSize(5)
                 .setConnectionPoolSize(10)

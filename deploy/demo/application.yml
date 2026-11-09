@@ -1,0 +1,51 @@
+server:
+  address: 0.0.0.0
+  port: 8084
+
+app:
+  master:
+    key: meeting-room-local-demo
+
+spring:
+  application:
+    name: meetingroom-demo
+  datasource:
+    url: jdbc:mysql://db:3306/meetingroom_demo?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Shanghai
+    username: demo
+    password: demo-local-db
+  data:
+    redis:
+      host: redis
+      port: 6379
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+  mail:
+    host: 127.0.0.1
+    port: 1
+    properties:
+      mail.smtp.connectiontimeout: 1000
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.uestcfir.pojo.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+aliyun:
+  oss:
+    endpoint: http://127.0.0.1:1
+    access-key-id: local-demo
+    access-key-secret: local-demo
+    bucket-name: local-demo
+    base-url: http://127.0.0.1:1
+
+xxl.job.enabled: false
+meeting.events.enabled: false
+cache.invalidation.enabled: false
+platform-services.enabled: false
+reservation.redis-address: redis://redis:6379

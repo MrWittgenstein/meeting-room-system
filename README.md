@@ -1,5 +1,12 @@
 # 树莓派智能会议室管理系统
 
+## 一键体验
+
+启动 Docker Desktop 后，在仓库根目录执行 `docker compose -f compose.demo.yml up --build -d`，
+然后打开 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)。
+体验环境会初始化测试账号和会议室，可以体验登录、预约和审批。
+[体验账号和验证步骤](deploy/demo/README.md) · [完整联调环境](services/local-runtime.md)
+
 本地工程化改进的实现、验证结果和启动方式见 [工程化改进实施记录](ENGINEERING_PROGRESS.md)。
 
 基于树莓派、Spring Boot、Vue 3和WebSocket实现的智能会议室管理系统。
