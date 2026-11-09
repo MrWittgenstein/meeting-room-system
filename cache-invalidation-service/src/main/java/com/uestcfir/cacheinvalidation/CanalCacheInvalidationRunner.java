@@ -31,10 +31,18 @@ public class CanalCacheInvalidationRunner implements CommandLineRunner {
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "canal-cache-invalidation");
-        thread.setDaemon(true);
+        // This is a non-web worker. A daemon thread lets the JVM exit after startup.
+        thread.setDaemon(false);
         return thread;
     });
     private volatile CanalConnector connector;
+
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        running.set(false);
+        closeConnector();
+        executor.shutdownNow();
+    }
 
     @Override
     public void run(String... args) {
@@ -49,7 +57,7 @@ public class CanalCacheInvalidationRunner implements CommandLineRunner {
                         new InetSocketAddress(properties.getCanalHost(), properties.getCanalPort()),
                         properties.getCanalDestination(), properties.getCanalUsername(), properties.getCanalPassword());
                 connector.connect();
-                connector.subscribe("meetingroom\\..*");
+                connector.subscribe(properties.getCanalFilter());
                 connector.rollback();
                 log.info("Connected to Canal {}:{}, destination={}", properties.getCanalHost(), properties.getCanalPort(), properties.getCanalDestination());
                 consumeConnected();
@@ -98,7 +106,12 @@ public class CanalCacheInvalidationRunner implements CommandLineRunner {
                 event.put("clear", invalidation.clear());
                 event.put("source", "canal");
                 event.put("occurredAt", Instant.now());
-                rabbitTemplate.convertAndSend(properties.getRabbitExchange(), properties.getRabbitRoutingKey(), objectMapper.writeValueAsString(event));
+                var correlation = new org.springframework.amqp.rabbit.connection.CorrelationData(eventId);
+                rabbitTemplate.convertAndSend(properties.getRabbitExchange(), properties.getRabbitRoutingKey(), objectMapper.writeValueAsString(event), correlation);
+                var confirm = correlation.getFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
+                if (!confirm.isAck() || correlation.getReturned() != null) {
+                    throw new IllegalStateException("Cache invalidation was not confirmed/routed by RabbitMQ");
+                }
             }
             rowIndex++;
         }

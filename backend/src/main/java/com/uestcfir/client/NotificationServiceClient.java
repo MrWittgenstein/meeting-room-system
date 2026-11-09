@@ -47,7 +47,7 @@ public class NotificationServiceClient {
             return meetingEventPublisher.publishAnnouncement(announcement, publisherId, recipients);
         } catch (Exception ex) {
             log.warn("notification-service announcement publish failed: {}", ex.getMessage());
-            return false;
+            throw new IllegalStateException("公告通知事件写入失败", ex);
         }
     }
 

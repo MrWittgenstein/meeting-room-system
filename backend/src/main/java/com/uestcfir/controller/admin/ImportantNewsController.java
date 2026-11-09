@@ -40,9 +40,10 @@ public class ImportantNewsController {
     public boolean addImportantNews(@RequestBody ImportantNews importantNews) {
         requireManage();
         importantNews.setPublisherId(CurrentUserContext.requireUserId());
+        importantNews.setPublisherName(CurrentUserContext.requireUser().getUsername());
         importantNews.setCreateTime(java.time.LocalDateTime.now());
         boolean saved = importantNewsService.addImportantNews(importantNews);
-        if (saved && "已发布".equals(importantNews.getStatus())) {
+        if (saved && "未过期".equals(importantNews.getStatus())) {
             notificationServiceClient.publishAnnouncement(importantNews, CurrentUserContext.requireUserId());
         }
         return saved;

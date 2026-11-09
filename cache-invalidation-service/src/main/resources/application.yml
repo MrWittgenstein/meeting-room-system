@@ -21,6 +21,7 @@ cache-invalidation:
   canal-destination: ${CANAL_DESTINATION:meetingroom}
   canal-username: ${CANAL_USERNAME:canal}
   canal-password: ${CANAL_PASSWORD:canal}
+  canal-filter: ${CANAL_FILTER_REGEX:meetingroom\..*}
   rabbit-exchange: ${CACHE_INVALIDATION_EXCHANGE:cache.invalidation}
   rabbit-routing-key: ${CACHE_INVALIDATION_ROUTING_KEY:cache.invalidate}
   batch-size: ${CANAL_BATCH_SIZE:100}

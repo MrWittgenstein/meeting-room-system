@@ -22,6 +22,16 @@ const router = createRouter({
     },
 
     {
+      path: '/system-admin',
+      component: () => import('@/views/system-admin/index.vue'),
+      meta: { systemAdmin: true },
+      children: [
+        { path: '', redirect: '/system-admin/users' },
+        { path: 'users', component: () => import('@/views/system-admin/users.vue') },
+        { path: 'logs', component: () => import('@/views/system-admin/logs.vue') },
+      ],
+    },
+    {
       path: '/manager',
       name: 'manager',
       component: manager,
@@ -101,6 +111,40 @@ const router = createRouter({
       component:()=>import("../views/user/meetingControl.vue")
     }
   ],
+})
+
+router.beforeEach(async to => {
+  if (!to.matched.some(record => record.meta.systemAdmin)) return true
+  if (!localStorage.getItem('sessionId') && !localStorage.getItem('token')) return '/'
+  try {
+    const { default: http } = await import('@/utils/http')
+    let response
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await http.get('/user/session', { timeout: 4000, skipAuthRedirect: true })
+        break
+      } catch (error) {
+        const status = error.response?.status
+        if (attempt > 0 || (status && status < 500)) throw error
+        // Only retry this read-only identity check, never the login POST.
+      }
+    }
+    const { data } = response
+    if (data.code !== 1) throw new Error(data.message || '会话校验失败')
+    if (data.data.role !== 'super_admin') {
+      const { ElMessage } = await import('element-plus')
+      ElMessage.error('仅系统管理员可访问此页面')
+      return data.data.role === 'room_admin' ? '/manager' : '/user/home'
+    }
+    localStorage.setItem('userInfo', JSON.stringify(data.data))
+    return true
+  } catch (error) {
+    if (error.response?.status === 401) return '/'
+    const { ElMessage } = await import('element-plus')
+    ElMessage.error(error.response?.status === 403 ? '没有系统管理员访问权限' : '暂时无法校验登录状态，请重试；无需重新输入账号密码')
+    console.warn('System admin session verification failed', error.code || error.response?.status || 'invalid-response')
+    return false
+  }
 })
 
 export default router

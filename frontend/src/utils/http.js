@@ -25,11 +25,14 @@ httpInstance.interceptors.request.use(config => {
 httpInstance.interceptors.response.use(
   response => response,
   error => {
-    if (error.response && error.response.status === 401) {
+    const currentSession = localStorage.getItem('sessionId') || localStorage.getItem('token')
+    const requestSession = error.config?.headers?.SessionId
+    // A delayed 401 for an older session must not erase a newer login.
+    if (error.response?.status === 401 && currentSession && requestSession === currentSession) {
       localStorage.removeItem('sessionId')
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
-      router.push('/')
+      if (!error.config?.skipAuthRedirect) router.push('/')
       ElMessage.error('登录已过期，请重新登录')
     }
     return Promise.reject(error)

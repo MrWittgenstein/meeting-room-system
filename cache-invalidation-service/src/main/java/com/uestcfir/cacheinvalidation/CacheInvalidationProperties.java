@@ -11,6 +11,7 @@ public class CacheInvalidationProperties {
     private String canalDestination = "meetingroom";
     private String canalUsername = "canal";
     private String canalPassword = "canal";
+    private String canalFilter = "meetingroom\\..*";
     private String rabbitExchange = "cache.invalidation";
     private String rabbitRoutingKey = "cache.invalidate";
     private int batchSize = 100;

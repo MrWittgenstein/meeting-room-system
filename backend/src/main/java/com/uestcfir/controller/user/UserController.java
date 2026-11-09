@@ -124,6 +124,17 @@ public class UserController {
         return Result.success(userInfo);
     }
 
+    /** Authoritative navigation identity; never expose the session secret. */
+    @GetMapping("/session")
+    public Result getSessionIdentity() {
+        SessionUser current = CurrentUserContext.requireUser();
+        return Result.success(java.util.Map.of(
+                "userId", current.getUserId(),
+                "userName", current.getUsername() == null ? "" : current.getUsername(),
+                "role", current.getRole(),
+                "permissions", current.getPermissions()));
+    }
+
     private static String textOrNull(JsonNode node, String field) {
         return node.hasNonNull(field) ? node.get(field).asText() : null;
     }
