@@ -1,10 +1,9 @@
 FROM maven:3.9-eclipse-temurin-17 AS api-build
 WORKDIR /build
 COPY backend/pom.xml pom.xml
-RUN mvn -B dependency:go-offline
 COPY backend/src src
 COPY deploy/demo/application.yml src/main/resources/application.yml
-RUN mvn -B -DskipTests package
+RUN --mount=type=cache,id=meeting-room-demo-maven,target=/root/.m2/repository,sharing=locked mvn -B -itr -DskipTests package
 
 FROM eclipse-temurin:17-jre-jammy AS api
 WORKDIR /app
